@@ -9,3 +9,6 @@ env:
 hooks:
   # A fresh preview's database is empty: load the course data.
   after_start: docker compose --profile ingestion run --rm ingestion
+# The preview inspector files issues on the upstream repo, not this fork.
+inspector:
+  issues: crux-bphc/chronofactorem-rewrite
