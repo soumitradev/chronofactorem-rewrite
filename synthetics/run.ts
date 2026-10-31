@@ -1,6 +1,7 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { generateKeyPairSync } from "node:crypto";
 import { mkdirSync, rmSync } from "node:fs";
+import { createServer } from "node:net";
 import { availableParallelism } from "node:os";
 import { dirname, resolve } from "node:path";
 import pg from "pg";
@@ -17,8 +18,10 @@ const backendDir = resolve(root, "backend");
 const frontendDir = resolve(root, "frontend");
 const outDir = resolve(import.meta.dirname, "screenshots");
 
-const BACKEND_PORT = 3999;
-const FRONTEND_PORT = 4999;
+// overridable so several runs can share a machine, each with its own ports
+// and database
+const BACKEND_PORT = Number(process.env.SYNTHETICS_BACKEND_PORT ?? 3999);
+const FRONTEND_PORT = Number(process.env.SYNTHETICS_FRONTEND_PORT ?? 4999);
 const FRONTEND_URL = `http://localhost:${FRONTEND_PORT}`;
 const API = `http://localhost:${BACKEND_PORT}`;
 
@@ -36,7 +39,15 @@ const DEVICES = {
 };
 const THEMES = ["light", "dark"] as const;
 
-const DB_NAME = "chrono_synthetics";
+// dropped and recreated on every run, so it has to look like a synthetics
+// database, never a real one
+const DB_NAME = process.env.SYNTHETICS_DB ?? "chrono_synthetics";
+if (!/^[a-z0-9_]*synthetics[a-z0-9_]*$/.test(DB_NAME)) {
+  console.error(
+    `SYNTHETICS_DB=${DB_NAME}: use lowercase letters, digits and underscores, and include "synthetics", since the run drops it`,
+  );
+  process.exit(1);
+}
 const server = {
   host: process.env.DB_HOST ?? "localhost",
   port: Number(process.env.PGPORT ?? 5432),
@@ -113,6 +124,22 @@ const seed = async () => {
   );
   return seeded.timetables;
 };
+
+// another run's server on the port would answer in place of this run's, so
+// stop before starting anything, and leave whatever holds it alone
+const ensureFree = (port: number, variable: string) =>
+  new Promise<void>((done, fail) => {
+    const probe = createServer()
+      .once("error", (error: NodeJS.ErrnoException) => {
+        if (error.code !== "EADDRINUSE") return fail(error);
+        console.error(
+          `port ${port} is already in use, set ${variable} to a free port`,
+        );
+        process.exit(1);
+      })
+      .once("listening", () => probe.close(() => done()))
+      .listen(port);
+  });
 
 const waitForBackend = async (backend: ChildProcess) => {
   for (let i = 0; i < 120; i++) {
@@ -213,6 +240,70 @@ const hiding = (parts: Part[] = []) =>
     )
     .join("");
 
+// chrome's fullPage capture can drop a scroll container's horizontal offset
+// (the phone side menu's tab track lands back on its first tab), so while a
+// shot is taken each offset is held as a translate of the scrolled content
+// instead. the page never sees the scroll events this causes
+type Pinned = {
+  el: HTMLElement;
+  left: number;
+  snap: string;
+  children: { child: HTMLElement; translate: string; transition: string }[];
+};
+const pinScroll = (page: Page) =>
+  page.evaluate(() => {
+    const w = window as unknown as { pinned?: Pinned[]; stopScroll?: boolean };
+    if (!w.stopScroll) {
+      w.stopScroll = true;
+      for (const type of ["scroll", "scrollend"]) {
+        window.addEventListener(type, (e) => e.stopImmediatePropagation(), {
+          capture: true,
+        });
+      }
+    }
+    w.pinned = [];
+    for (const el of document.querySelectorAll<HTMLElement>("*")) {
+      const left = el.scrollLeft;
+      if (left === 0) continue;
+      const children = [...el.children].flatMap((child) =>
+        child instanceof HTMLElement
+          ? [
+              {
+                child,
+                translate: child.style.translate,
+                transition: child.style.transition,
+              },
+            ]
+          : [],
+      );
+      w.pinned.push({ el, left, snap: el.style.scrollSnapType, children });
+      el.style.scrollSnapType = "none";
+      el.scrollLeft = 0;
+      // the reduced-motion styles give everything a tiny transition, and a
+      // translate left mid-transition stays stuck after the shot
+      for (const { child } of children) {
+        child.style.transition = "none";
+        child.style.translate = `${-left}px 0`;
+      }
+    }
+  });
+const unpinScroll = (page: Page) =>
+  page.evaluate(() => {
+    const w = window as unknown as { pinned?: Pinned[] };
+    for (const { el, left, snap, children } of w.pinned ?? []) {
+      for (const { child, translate } of children) {
+        child.style.translate = translate;
+        getComputedStyle(child).translate;
+      }
+      for (const { child, transition } of children) {
+        child.style.transition = transition;
+      }
+      el.style.scrollSnapType = snap;
+      el.scrollLeft = left;
+    }
+    w.pinned = [];
+  });
+
 const shoot = async (
   timetables: Record<string, string>,
   announcementIds: string[],
@@ -310,6 +401,7 @@ const shoot = async (
         );
         await settle();
       }
+      await pinScroll(page);
       shots.push(
         await page.screenshot({
           fullPage: true,
@@ -318,6 +410,7 @@ const shoot = async (
           style: hiding(synthetic.hide),
         }),
       );
+      await unpinScroll(page);
     }
     await context.close();
     await sideBySide(shots, resolve(outDir, synthetic.name, `${device}.png`));
@@ -338,6 +431,9 @@ const shoot = async (
 };
 
 const main = async () => {
+  await ensureFree(BACKEND_PORT, "SYNTHETICS_BACKEND_PORT");
+  await ensureFree(FRONTEND_PORT, "SYNTHETICS_FRONTEND_PORT");
+
   // the frontend doesn't need the database, so it builds while that's set up
   process.env.VITE_FRONTEND_URL = FRONTEND_URL;
   const built = build({ root: frontendDir, logLevel: "warn" });
