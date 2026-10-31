@@ -214,6 +214,19 @@
       animation: vt-in-back var(--d-3) var(--e-out) both;
     }
   }
+
+  /* Home card <-> timetable page shared element (lib/sharedTransition.ts) */
+  ::view-transition-group(timetable-title),
+  ::view-transition-group(timetable-grid) {
+    animation-duration: var(--d-3);
+    animation-timing-function: var(--e-out);
+  }
+  ::view-transition-old(timetable-grid),
+  ::view-transition-new(timetable-grid) {
+    block-size: 100%;
+    object-fit: cover;
+    object-position: top left;
+  }
 }
 
 /* Theme change: circular reveal is driven from JS on the new snapshot */
@@ -251,11 +264,314 @@ html.theme-transition::view-transition-new(root) {
   }
 }
 
+.now-rule {
+  transition: transform var(--d-3) var(--e-out);
+}
+
+/* the dot pulses once in the first 30% of each 4s cycle; PR 1's reduced-motion
+   rule turns that into a single instant run */
+.now-dot {
+  animation: now-pulse 4s infinite;
+}
+
+@keyframes now-pulse {
+  0% {
+    scale: 1;
+    opacity: 1;
+  }
+  15% {
+    scale: 1.35;
+    opacity: 0.6;
+  }
+  30%,
+  100% {
+    scale: 1;
+    opacity: 1;
+  }
+}
+
+/* the timetable page shell arriving after its skeleton */
+@keyframes shell-fade {
+  from {
+    opacity: 0;
+  }
+}
+
 @keyframes skeleton-sweep {
   from {
     background-position: 200% 0;
   }
   to {
     background-position: -200% 0;
+  }
+}
+
+/* Courses motion */
+@keyframes cf-roll-out {
+  to {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}
+@keyframes cf-roll-in {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+@keyframes cf-tick-in {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes cf-ring-pulse {
+  0% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  40% {
+    opacity: 0.9;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+@keyframes cf-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes cf-hop {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+@keyframes cf-panel-out-forward {
+  to {
+    transform: translateX(-24px);
+    opacity: 0;
+  }
+}
+@keyframes cf-panel-in-forward {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+@keyframes cf-panel-out-back {
+  to {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+@keyframes cf-panel-in-back {
+  from {
+    transform: translateX(-24px);
+    opacity: 0;
+  }
+}
+.cf-ring-pulse::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 2px solid var(--accent);
+  pointer-events: none;
+  /* Starts once the push transition that landed here has played. */
+  animation: cf-ring-pulse 600ms var(--e-out) var(--d-3) 1 both;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html:active-view-transition-type(panel-forward) {
+    &::view-transition-old(cf-panel) {
+      animation: cf-panel-out-forward var(--d-3) var(--e-in) both;
+    }
+    &::view-transition-new(cf-panel) {
+      animation: cf-panel-in-forward var(--d-3) var(--e-out) both;
+    }
+  }
+  html:active-view-transition-type(panel-back) {
+    &::view-transition-old(cf-panel) {
+      animation: cf-panel-out-back var(--d-3) var(--e-in) both;
+    }
+    &::view-transition-new(cf-panel) {
+      animation: cf-panel-in-back var(--d-3) var(--e-out) both;
+    }
+  }
+}
+
+/* Timetable surfaces */
+
+/* The picker's ghost block fades in on mount and out before it unmounts */
+.tt-ghost {
+  opacity: 0;
+  transition: opacity var(--d-1) var(--e-out);
+}
+.tt-ghost[data-visible] {
+  opacity: 1;
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+/* Sections animate in and out (spec §9). The surface tags each block with
+   data-presence; the export never gets "entering" or "leaving". */
+[data-presence] {
+  transition:
+    opacity var(--d-2) var(--e-out),
+    transform var(--d-2) var(--e-out),
+    background-color var(--d-1) var(--e-out),
+    box-shadow var(--d-1) var(--e-out);
+}
+[data-presence="entering"] {
+  @starting-style {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+[data-presence="leaving"] {
+  opacity: 0;
+  transform: scale(0.92);
+  transition-timing-function: var(--e-in);
+}
+
+/* Agenda rows collapse through grid-template-rows so the rows below slide */
+.tt-row {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows var(--d-2) var(--e-out);
+}
+.tt-row[data-row-presence="entering"] {
+  @starting-style {
+    grid-template-rows: 0fr;
+  }
+}
+.tt-row[data-row-presence="leaving"] {
+  grid-template-rows: 0fr;
+  transition-timing-function: var(--e-in);
+  & [data-presence] {
+    transform: scale(0.96);
+  }
+}
+
+/* Same-route surface transitions (spec §9, C7). Names exist only while their
+   transition runs, so route transitions and the export never see them. */
+@keyframes tt-day-out-next {
+  to {
+    opacity: 0;
+    transform: translateX(-32px);
+  }
+}
+@keyframes tt-day-in-next {
+  from {
+    opacity: 0;
+    transform: translateX(32px);
+  }
+}
+@keyframes tt-day-out-prev {
+  to {
+    opacity: 0;
+    transform: translateX(32px);
+  }
+}
+@keyframes tt-day-in-prev {
+  from {
+    opacity: 0;
+    transform: translateX(-32px);
+  }
+}
+@keyframes tt-root-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes tt-root-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* keep the snapshots from swallowing taps; Chrome still sends taps during a
+   transition to <html>, so the phone dock re-routes its own (TimetableDock) */
+::view-transition {
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html:active-view-transition-type(view-morph, orient) {
+    & .tt-block {
+      view-transition-name: var(--vt);
+      view-transition-class: tt-block;
+    }
+    &::view-transition-group(.tt-block) {
+      animation-duration: var(--d-3);
+      animation-timing-function: var(--e-out);
+    }
+    /* the UA default scales each snapshot to the group's width, which
+    stretches text between an agenda row and a week tile. keep the text at
+    its own size, pinned top-left, and let the growing box reveal it */
+    &::view-transition-old(.tt-block),
+    &::view-transition-new(.tt-block) {
+      height: 100%;
+      object-fit: none;
+      object-position: top left;
+    }
+    &::view-transition-old(root) {
+      animation: tt-root-out var(--d-2) var(--e-out) both;
+    }
+    &::view-transition-new(root) {
+      animation: tt-root-in var(--d-2) var(--e-out) both;
+    }
+    /* the grid card is its own group; fade it like the page so the old and
+    new axis labels don't overlap mid-morph */
+    &::view-transition-old(timetable-grid) {
+      animation: tt-root-out var(--d-2) var(--e-out) both;
+    }
+    &::view-transition-new(timetable-grid) {
+      animation: tt-root-in var(--d-2) var(--e-out) both;
+    }
+  }
+  html:active-view-transition-type(day-next, day-prev) {
+    & .tt-agenda {
+      view-transition-name: tt-agenda;
+    }
+    /* only the agenda slides: the new page sits plainly on top of the old
+    one. without normal blending the two would add up (plus-lighter) and
+    brighten the page, and the old day pill would show through */
+    &::view-transition-old(root),
+    &::view-transition-new(root) {
+      animation: none;
+      mix-blend-mode: normal;
+    }
+  }
+  html:active-view-transition-type(day-next) {
+    &::view-transition-old(tt-agenda) {
+      animation: tt-day-out-next var(--d-2) var(--e-in) both;
+    }
+    &::view-transition-new(tt-agenda) {
+      animation: tt-day-in-next var(--d-2) var(--e-out) both;
+    }
+  }
+  html:active-view-transition-type(day-prev) {
+    &::view-transition-old(tt-agenda) {
+      animation: tt-day-out-prev var(--d-2) var(--e-in) both;
+    }
+    &::view-transition-new(tt-agenda) {
+      animation: tt-day-in-prev var(--d-2) var(--e-out) both;
+    }
   }
 }

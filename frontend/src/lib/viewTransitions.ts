@@ -1,25 +1,77 @@
 import type { ParsedLocation } from "@tanstack/react-router";
+import type { TimetableSearch } from "./timetableSearch";
 
-const prefersReducedMotion = () =>
+export const prefersReducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/** Whether `document.startViewTransition({ types })` is understood. */
+export const supportsTransitionTypes = () =>
+  typeof document !== "undefined" &&
+  typeof document.startViewTransition === "function" &&
+  typeof ViewTransition !== "undefined" &&
+  "types" in ViewTransition.prototype &&
+  typeof CSS !== "undefined" &&
+  CSS.supports("selector(:active-view-transition-type(a))");
 
 const tsrIndex = (location: ParsedLocation) =>
   (location.state as { __TSR_index?: number }).__TSR_index ?? 0;
 
 /**
- * View transition types for route changes. Search-only or hash-only
- * navigations (same pathname) and reduced-motion users get no transition.
+ * Whether a search-only move swaps the course panel: a different course (or
+ * none), or one open sheet replaced by another. A sheet opening or closing
+ * is the sheet's own motion, so it never slides the panel.
+ */
+export const panelMoved = (a: TimetableSearch, b: TimetableSearch): boolean => {
+  if (!!a.sheet !== !!b.sheet) return false;
+  return (
+    (a.course ?? null) !== (b.course ?? null) ||
+    (!!a.sheet && a.sheet !== b.sheet)
+  );
+};
+
+let sheetClosePending = false;
+
+/**
+ * Marks the next history pop as part of closing the sheet, so it does not
+ * slide the course panel under the sheet's own exit. Self-clears.
+ */
+export function markSheetClosing(): void {
+  sheetClosePending = true;
+  setTimeout(() => {
+    sheetClosePending = false;
+  }, 1000);
+}
+
+/**
+ * View transition types for router navigations without explicit types. In-app
+ * search moves pass `viewTransition: false` (or their own types), so in
+ * practice this covers route changes and history pops. Search-only pops that
+ * move the course panel slide it; other search-only moves and reduced-motion
+ * users get no transition.
  */
 export function routeTransitionTypes(info: {
   fromLocation?: ParsedLocation;
   toLocation: ParsedLocation;
   pathChanged: boolean;
 }): string[] | false {
-  if (!info.pathChanged || !info.fromLocation) return false;
+  if (!info.fromLocation) return false;
   if (typeof window !== "undefined" && prefersReducedMotion()) return false;
-  return tsrIndex(info.toLocation) < tsrIndex(info.fromLocation)
-    ? ["back"]
-    : ["forward"];
+  const back = tsrIndex(info.toLocation) < tsrIndex(info.fromLocation);
+  if (!info.pathChanged) {
+    if (sheetClosePending) {
+      sheetClosePending = false;
+      return false;
+    }
+    if (
+      !panelMoved(
+        info.fromLocation.search as TimetableSearch,
+        info.toLocation.search as TimetableSearch,
+      )
+    )
+      return false;
+    return back ? ["panel-back"] : ["panel-forward"];
+  }
+  return back ? ["back"] : ["forward"];
 }
 
 /**
@@ -64,4 +116,45 @@ export function startThemeTransition(
     .catch(() => {});
   const cleanup = () => root.classList.remove("theme-transition");
   transition.finished.then(cleanup, cleanup);
+}
+
+/** Same-route timetable surface changes (spec §9). */
+export type SurfaceTransition =
+  | "day-next"
+  | "day-prev"
+  | "view-morph"
+  | "orient"
+  | "panel-forward"
+  | "panel-back";
+
+/**
+ * Runs `update` inside a typed view transition. Without support for types, or
+ * under reduced motion, `update` simply runs. `update` must commit the DOM
+ * synchronously (wrap React state in `flushSync`).
+ */
+export function startSurfaceTransition(
+  type: SurfaceTransition,
+  update: () => void,
+): void {
+  if (prefersReducedMotion() || !supportsTransitionTypes()) {
+    update();
+    return;
+  }
+  let ran = false;
+  const run = () => {
+    if (ran) return;
+    ran = true;
+    update();
+  };
+  try {
+    const transition = document.startViewTransition({
+      update: run,
+      types: [type],
+    });
+    transition.ready.catch(() => {});
+    transition.finished.catch(() => {});
+    transition.updateCallbackDone.catch(() => {});
+  } catch {
+    run();
+  }
 }

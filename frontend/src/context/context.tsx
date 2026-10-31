@@ -8,11 +8,11 @@ import {
   useMemo,
   useReducer,
 } from "react";
-import CenteredSpinner from "@/components/CenteredSpinner";
 import useCourse from "@/data-access/hooks/useCourse";
 import { courseQueryOptions } from "@/data-access/hooks/useCourses";
 import useTimetable from "@/data-access/hooks/useTimetable";
 import useUser from "@/data-access/hooks/useUser";
+import { useTimetableNav } from "@/lib/useTimetableNav";
 import {
   filterCoursesInTimetable,
   formatCDCWarningsAndOptions,
@@ -28,13 +28,8 @@ import {
 
 const initialTimetableState: TimetableUIState = {
   isVertical: false,
-  sidebarOpen: false,
   isCopyingTimetable: false,
-  currentCourseID: null,
-  currentSectionType: null,
-  currentTab: "CDCs",
   screenIsLarge: false,
-  searchTerm: "",
 };
 
 type TimetableProviderType = {
@@ -54,15 +49,22 @@ export const useTimetableState = () => {
 
 export const TimetableProvider = ({
   children,
+  fallback,
 }: {
   children: React.ReactNode;
+  /** Shown while data the route loader didn't wait for (the user) loads. */
+  fallback: React.ReactNode;
 }) => {
   const { timetableId } = useParams({
     strict: false,
   });
   if (timetableId === undefined) throw notFound();
   return (
-    <TimetableDataProvider key={timetableId} timetableId={timetableId}>
+    <TimetableDataProvider
+      key={timetableId}
+      timetableId={timetableId}
+      fallback={fallback}
+    >
       {children}
     </TimetableDataProvider>
   );
@@ -71,9 +73,11 @@ export const TimetableProvider = ({
 const TimetableDataProvider = ({
   children,
   timetableId,
+  fallback,
 }: {
   children: React.ReactNode;
   timetableId: string;
+  fallback: React.ReactNode;
 }) => {
   const { data: user, isLoading: isUserLoading } = useUser();
   const { data: timetable, isLoading: isTimetableLoading } =
@@ -88,14 +92,14 @@ const TimetableDataProvider = ({
   });
   const [state, dispatch] = useReducer(
     reducer,
-    timetable?.draft,
-    (isDraft): TimetableUIState => ({
+    undefined,
+    (): TimetableUIState => ({
       ...initialTimetableState,
       screenIsLarge: window.matchMedia("(min-width: 1024px)").matches,
-      currentTab: isDraft ? "CDCs" : "currentCourses",
     }),
   );
-  const { data: course } = useCourse(state.currentCourseID);
+  const { search } = useTimetableNav();
+  const { data: course } = useCourse(search.course ?? null);
 
   const value = useMemo(() => {
     const uniqueSectionTypes = course
@@ -109,8 +113,13 @@ const TimetableDataProvider = ({
         courses,
         course,
         uniqueSectionTypes,
+        currentCourseID: search.course ?? null,
         currentSectionType:
-          state.currentSectionType ?? uniqueSectionTypes[0] ?? null,
+          search.type && uniqueSectionTypes.includes(search.type)
+            ? search.type
+            : (uniqueSectionTypes[0] ?? null),
+        currentTab: search.tab ?? "courses",
+        searchTerm: search.q ?? "",
         coursesInTimetable:
           courses && timetable
             ? filterCoursesInTimetable(courses, timetable)
@@ -126,7 +135,7 @@ const TimetableDataProvider = ({
       },
       dispatch,
     };
-  }, [state, user, timetable, courses, course]);
+  }, [state, search, user, timetable, courses, course]);
 
   useEffect(() => {
     const media = window.matchMedia("(min-width: 1024px)");
@@ -140,7 +149,7 @@ const TimetableDataProvider = ({
   }, []);
 
   if (isUserLoading || isCoursesLoading || isTimetableLoading) {
-    return <CenteredSpinner />;
+    return fallback;
   }
 
   return (

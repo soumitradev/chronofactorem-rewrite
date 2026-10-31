@@ -3,6 +3,7 @@ import { Router, rootRouteWithContext } from "@tanstack/react-router";
 import { AxiosError } from "axios";
 import authenticatedRoute from "./AuthenticatedRoute";
 import NotFound from "./components/NotFound";
+import { rootSearchSchema } from "./lib/rootSearch";
 import { routeTransitionTypes } from "./lib/viewTransitions";
 import aboutRoute from "./pages/About";
 import editTimetableRoute from "./pages/EditTimetable";
@@ -35,6 +36,7 @@ export const rootRoute = rootRouteWithContext<{
   queryClient: QueryClient;
 }>()({
   component: RootComponent,
+  validateSearch: rootSearchSchema,
 });
 
 const routeTree = rootRoute.addChildren([
@@ -65,6 +67,14 @@ export const router = new Router({
     queryClient,
   },
   defaultNotFoundComponent: NotFound,
+  // Timetable pages key scroll by path, so search-param-only history moves
+  // (sheet, course, day/week) keep the page where it is. Every other page keys
+  // by history entry, so following a link still starts at the top.
+  scrollRestoration: true,
+  getScrollRestorationKey: (location) =>
+    /^\/(edit|view)\//.test(location.pathname)
+      ? location.pathname
+      : (location.state.__TSR_key ?? location.href),
   defaultViewTransition: supportsTransitionTypes
     ? { types: routeTransitionTypes }
     : false,
