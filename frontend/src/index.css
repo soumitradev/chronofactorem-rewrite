@@ -216,6 +216,10 @@
   }
 
   /* Home card <-> timetable page shared element (lib/sharedTransition.ts) */
+  html:active-view-transition-type(shared-timetable) {
+    --vt-timetable-title: timetable-title;
+    --vt-timetable-grid: timetable-grid;
+  }
   ::view-transition-group(timetable-title),
   ::view-transition-group(timetable-grid) {
     animation-duration: var(--d-3);
@@ -240,6 +244,11 @@ html.theme-transition::view-transition-old(root) {
 }
 html.theme-transition::view-transition-new(root) {
   z-index: 1;
+}
+
+html.theme-transition * {
+  /* biome-ignore lint/complexity/noImportantStyles: must override the inline names on shared elements */
+  view-transition-name: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -396,6 +405,9 @@ html.theme-transition::view-transition-new(root) {
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  html:active-view-transition-type(panel-forward, panel-back) .cf-panel {
+    view-transition-name: cf-panel;
+  }
   html:active-view-transition-type(panel-forward) {
     &::view-transition-old(cf-panel) {
       animation: cf-panel-out-forward var(--d-3) var(--e-in) both;
@@ -425,6 +437,22 @@ html.theme-transition::view-transition-new(root) {
   opacity: 1;
   @starting-style {
     opacity: 0;
+  }
+}
+
+/* The section a hovered pick would swap out: a faded, struck-through
+   danger tint, dashed like the ghost that replaces it */
+.tt-outgoing {
+  background-color: color-mix(in oklab, var(--danger-bg) 60%, var(--ev));
+  outline: 1.5px dashed color-mix(in oklab, var(--danger) 70%, transparent);
+  outline-offset: -1.5px;
+  & span {
+    color: var(--muted);
+  }
+  & span.font-semibold {
+    text-decoration: line-through;
+    text-decoration-color: var(--danger);
+    text-decoration-thickness: 1.5px;
   }
 }
 
@@ -513,6 +541,7 @@ html.theme-transition::view-transition-new(root) {
 
 @media (prefers-reduced-motion: no-preference) {
   html:active-view-transition-type(view-morph, orient) {
+    --vt-timetable-grid: timetable-grid;
     & .tt-block {
       view-transition-name: var(--vt);
       view-transition-class: tt-block;
@@ -537,7 +566,13 @@ html.theme-transition::view-transition-new(root) {
       animation: tt-root-in var(--d-2) var(--e-out) both;
     }
     /* the grid card is its own group; fade it like the page so the old and
-    new axis labels don't overlap mid-morph */
+    new axis labels don't overlap mid-morph. the home-card rule covers the
+    group with each snapshot, which blows the agenda's time column up while
+    the group is still week-sized, so keep these at their own size too */
+    &::view-transition-old(timetable-grid),
+    &::view-transition-new(timetable-grid) {
+      object-fit: none;
+    }
     &::view-transition-old(timetable-grid) {
       animation: tt-root-out var(--d-2) var(--e-out) both;
     }
