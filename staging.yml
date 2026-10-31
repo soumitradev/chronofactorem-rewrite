@@ -10,3 +10,6 @@ expose:
     healthcheck:
       path: /healthz
       timeout: 120s
+# The preview inspector files issues on the upstream repo, not this fork.
+inspector:
+  issues: crux-bphc/chronofactorem-rewrite
