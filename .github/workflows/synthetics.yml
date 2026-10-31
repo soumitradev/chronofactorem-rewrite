@@ -1,10 +1,11 @@
 name: Synthetics screenshots
 
 # master's screenshots are the baseline, a pull request gets a comment with
-# what it changes against that. see synthetics/report.ts
+# what it changes against master's screenshots where it branched off. see
+# synthetics/report.ts
 on:
   pull_request:
-    types: [ labeled, synchronize ]
+    types: [ opened, reopened, ready_for_review, labeled, synchronize ]
     # only what can change a screenshot
     paths: &paths
       - frontend/**
@@ -31,8 +32,12 @@ jobs:
   # its own fonts, so the bare runner renders the exact same pixels, without
   # the 2.5gb image pull
   shoot:
-    # same ready gate as ci.yml
-    if: ${{ github.event_name == 'push' || ((github.event.label.name == 'ready' || contains(github.event.pull_request.labels.*.name, 'ready')) && github.event.pull_request.head.repo.full_name == github.repository) }}
+    # same ready gate as ci.yml, and never on forks
+    if: >-
+      ${{ github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && (
+      (github.event.action == 'labeled' && github.event.label.name == 'ready')
+      || (github.event.action != 'labeled' && (contains(github.event.pull_request.labels.*.name, 'ready')
+        || (!github.event.pull_request.draft && contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association)))))) }}
     runs-on: ubuntu-24.04
     strategy:
       matrix:
@@ -105,6 +110,10 @@ jobs:
         uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          # master's history without file contents, to find where a pull
+          # request branched off
+          fetch-depth: 0
+          filter: blob:none
 
       - name: Install Node.js
         uses: actions/setup-node@v7

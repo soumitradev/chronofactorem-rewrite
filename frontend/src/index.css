@@ -148,8 +148,11 @@
   --d-1: 120ms;
   --d-2: 200ms;
   --d-3: 300ms;
+  /* Whole-screen motion, such as the theme reveal */
+  --d-4: 480ms;
   --e-out: cubic-bezier(0.2, 0, 0, 1);
   --e-in: cubic-bezier(0.3, 0, 1, 1);
+  --e-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   /* One small overshoot (~6%) settling within --d-3 */
   --e-spring: linear(
     0,
@@ -215,6 +218,25 @@
     }
   }
 
+  /* the navbar holds still while the page slides under it, and only
+  crossfades what changed (the active link, the create button). only while
+  it sits at the top of both pages (data-navbar-still, lib/viewTransitions.ts),
+  since a scrolled page would make it jump. an open dialog's scrim covers it,
+  and a named navbar would paint above the scrim, so it slides with the page
+  then */
+  html[data-navbar-still]:active-view-transition-type(forward, back):not(
+    :has([role="dialog"], [role="alertdialog"])
+  ) .app-navbar {
+    view-transition-name: app-navbar;
+  }
+  ::view-transition-group(app-navbar) {
+    animation: none;
+  }
+  ::view-transition-old(app-navbar),
+  ::view-transition-new(app-navbar) {
+    animation-duration: var(--d-3);
+  }
+
   /* Home card <-> timetable page shared element (lib/sharedTransition.ts) */
   html:active-view-transition-type(shared-timetable) {
     --vt-timetable-title: timetable-title;
@@ -244,6 +266,9 @@ html.theme-transition::view-transition-old(root) {
 }
 html.theme-transition::view-transition-new(root) {
   z-index: 1;
+  /* hidden until the reveal starts, which can be a frame after the
+     snapshots first paint */
+  clip-path: circle(0);
 }
 
 html.theme-transition * {
@@ -540,6 +565,24 @@ html.theme-transition * {
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  /* the phone dock is fixed over the page. left in the root snapshot, every
+  named snapshot (grid, blocks, agenda) would paint over it, so lift it into
+  its own group on top and show it live: no fade, no slide */
+  html:active-view-transition-type(view-morph, orient, day-next, day-prev) {
+    & .dock {
+      view-transition-name: tt-dock;
+    }
+    &::view-transition-group(tt-dock) {
+      z-index: 1;
+      animation: none;
+    }
+    &::view-transition-old(tt-dock) {
+      display: none;
+    }
+    &::view-transition-new(tt-dock) {
+      animation: none;
+    }
+  }
   html:active-view-transition-type(view-morph, orient) {
     --vt-timetable-grid: timetable-grid;
     & .tt-block {

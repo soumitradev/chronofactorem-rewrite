@@ -74,11 +74,26 @@ export function routeTransitionTypes(info: {
       return false;
     return back ? ["panel-back"] : ["panel-forward"];
   }
+  document.documentElement.toggleAttribute(
+    "data-navbar-still",
+    window.scrollY === 0,
+  );
   const from = timetableId(info.fromLocation);
   const to = timetableId(info.toLocation);
   const types = back ? ["back"] : ["forward"];
   if (!from || !to || from === to) types.push("shared-timetable");
   return types;
+}
+
+/**
+ * The navbar holds still through a route slide only while it sits at the top
+ * of both pages; otherwise it would jump between them. `routeTransitionTypes`
+ * marks it from the old page's scroll, and this unmarks it once the new page
+ * has restored its scroll, before the new snapshot is taken.
+ */
+export function releaseStillNavbar(): void {
+  if (window.scrollY !== 0)
+    document.documentElement.removeAttribute("data-navbar-still");
 }
 
 /**
@@ -101,8 +116,8 @@ export function startThemeTransition(
     Math.max(origin.y, window.innerHeight - origin.y),
   );
   const style = getComputedStyle(root);
-  const duration = style.getPropertyValue("--d-3").trim() || "300ms";
-  const easing = style.getPropertyValue("--e-out").trim() || "ease-out";
+  const duration = style.getPropertyValue("--d-4").trim() || "480ms";
+  const easing = style.getPropertyValue("--e-in-out").trim() || "ease-in-out";
   transition.ready
     .then(() => {
       root.animate(
@@ -116,6 +131,7 @@ export function startThemeTransition(
           duration:
             Number.parseFloat(duration) * (duration.endsWith("ms") ? 1 : 1000),
           easing,
+          fill: "forwards",
           pseudoElement: "::view-transition-new(root)",
         },
       );
