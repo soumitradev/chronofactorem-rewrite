@@ -10,6 +10,7 @@ import {
 } from "@/data-access/hooks/useTimetableSectionAction";
 import { formatExam, summarizeRoomTimes } from "@/lib/formatTime";
 import { PANEL_VT_CLASS, panelForward } from "@/lib/panelTransition";
+import { useSkeletonFadeIn } from "@/lib/skeletonFade";
 import { titleCase } from "@/lib/titleCase";
 import { useTimetableNav } from "@/lib/useTimetableNav";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,8 @@ const group =
   "mx-4 mt-2.5 mb-6 lg:mx-0 rounded-xl border border-line bg-surface [&>*+*]:border-t [&>*+*]:border-line [&>:first-child]:rounded-t-[calc(var(--radius-xl)-1px)] [&>:last-child]:rounded-b-[calc(var(--radius-xl)-1px)]";
 
 const rowGrid = "grid grid-cols-[40px_1fr_auto] gap-x-2.5 px-3.5 py-[13px]";
+
+const ADVANCE_DELAY = 350;
 
 const reducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -132,7 +135,15 @@ const CourseDetailsMenu = ({
       inFlight.current = false;
     },
   };
+  // Short delay before moving to next tab
+  const advance = useRef<number | undefined>(undefined);
+  const cancelAdvance = () => window.clearTimeout(advance.current);
+  useEffect(() => cancelAdvance, []);
+  const at = useRef("");
+  at.current = `${currentCourseID}:${currentSectionType}`;
+
   const handleSectionClick = (section: Section) => {
+    cancelAdvance();
     if (!timetable || pending || inFlight.current) return;
     inFlight.current = true;
     if (timetable.sections.some((item) => item.id === section.id)) {
@@ -153,13 +164,19 @@ const CourseDetailsMenu = ({
           onSuccess: () => {
             const next =
               uniqueSectionTypes[uniqueSectionTypes.indexOf(section.type) + 1];
-            if (next) setType(next);
+            if (!next) return;
+            const from = at.current;
+            advance.current = window.setTimeout(() => {
+              if (at.current === from) setType(next);
+            }, ADVANCE_DELAY);
           },
         },
       );
   };
   // a section's day and hour, without the course code and room
   const slot = (roomTime: string) => roomTime.split(":").slice(2).join(":");
+
+  const fadeIn = useSkeletonFadeIn(course === undefined);
 
   const landed = useClashLanding(course?.id ?? null, currentSectionType);
   const [pulsedNonce, setPulsedNonce] = useState<number | null>(null);
@@ -229,8 +246,13 @@ const CourseDetailsMenu = ({
               <ChevronLeft size={22} aria-hidden="true" />
             </button>
             {course ? (
-              <h2 className="min-w-0 truncate text-[19px] font-semibold text-ink">
-                {course.code}
+              <h2
+                className={cn(
+                  "line-clamp-2 min-w-0 text-[19px] leading-tight font-semibold text-ink",
+                  fadeIn.className,
+                )}
+              >
+                {titleCase(course.name)}
               </h2>
             ) : (
               <Skeleton className="h-5 w-24" />
@@ -243,9 +265,11 @@ const CourseDetailsMenu = ({
               "flex flex-col text-[13px] leading-normal text-ink-muted",
               // phone sheet: line up with the sheet title after its ‹ button
               showHeader ? "pl-7" : "pl-[38px]",
+              fadeIn.className,
             )}
+            onAnimationEnd={fadeIn.onAnimationEnd}
           >
-            <span>{titleCase(course.name)}</span>
+            <span>{course.code}</span>
             <ExamLine
               label="Midsem"
               start={course.midsemStartTime}
@@ -263,10 +287,16 @@ const CourseDetailsMenu = ({
         {course && currentSectionType && uniqueSectionTypes.length > 0 && (
           <Segmented
             // the 300px desktop panel (below xl) needs tighter tabs to fit full names
-            className="mt-3 h-11 lg:h-10 lg:max-xl:[&>button]:gap-1 lg:max-xl:[&>button]:px-1.5 lg:max-xl:[&>button]:text-sm"
+            className={cn(
+              "mt-3 h-11 lg:h-10 lg:max-xl:[&>button]:gap-1 lg:max-xl:[&>button]:px-1.5 lg:max-xl:[&>button]:text-sm",
+              fadeIn.className,
+            )}
             aria-label="Section type"
             value={currentSectionType}
-            onValueChange={(t) => setType(t)}
+            onValueChange={(t) => {
+              cancelAdvance();
+              setType(t);
+            }}
             options={uniqueSectionTypes.map((type) => {
               const pick = chosen(type);
               return {
@@ -291,7 +321,11 @@ const CourseDetailsMenu = ({
           />
         )}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div
+        className="min-h-0 flex-1 overflow-y-auto"
+        onPointerDownCapture={cancelAdvance}
+        onKeyDownCapture={cancelAdvance}
+      >
         {course === undefined ? (
           <div className={group}>
             {[0, 1, 2, 3].map((i) => (
@@ -301,7 +335,7 @@ const CourseDetailsMenu = ({
             ))}
           </div>
         ) : (
-          <div className={group}>
+          <div className={cn(group, fadeIn.className)}>
             {sections.map(({ section, clashing }) => {
               if (clashing.length > 0) {
                 return (
@@ -353,7 +387,7 @@ const CourseDetailsMenu = ({
                     rowGrid,
                     "relative w-full cursor-pointer items-start text-left transition-colors duration-(--d-2) focus-visible:outline-offset-[-2px]",
                     selected
-                      ? "bg-brand-bg shadow-[inset_3px_0_0_var(--accent)]"
+                      ? "bg-brand-bg bg-[linear-gradient(to_right,var(--accent)_3px,transparent_3px)]"
                       : "hover:bg-sunk",
                     selected && pulse && "cf-ring-pulse",
                     busy && "cursor-progress",

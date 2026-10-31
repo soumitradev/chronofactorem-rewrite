@@ -24,6 +24,7 @@ import {
   setSharedTimetable,
   subscribeSharedTimetable,
 } from "@/lib/sharedTransition";
+import { skeletonRef, useSkeletonCrossfade } from "@/lib/skeletonFade";
 import { cn } from "@/lib/utils";
 import authenticatedRoute from "../AuthenticatedRoute";
 import TimetableCard from "../components/TimetableCard";
@@ -242,9 +243,11 @@ const TimetableSection = ({
   );
 };
 
+const homeSkeletonRef = skeletonRef("home");
+
 function HomeSkeleton() {
   return (
-    <main className={mainClass} aria-busy="true">
+    <main ref={homeSkeletonRef} className={mainClass} aria-busy="true">
       <h1 className="pt-2 text-2xl font-semibold lg:pt-10 lg:text-3xl">
         Timetables
       </h1>
@@ -278,9 +281,9 @@ function HomeSkeleton() {
 const homeRoute = new Route({
   getParentRoute: () => authenticatedRoute,
   path: "/",
-  loader: ({ context: { queryClient } }) =>
+  loader: ({ context: { queryClient }, preload }) =>
     queryClient.ensureQueryData(userQueryOptions).catch((error) => {
-      handleLoginRedirect(error);
+      if (!preload) handleLoginRedirect(error);
       throw error;
     }),
   component: Home,
@@ -295,6 +298,7 @@ function Home() {
   const { data: user, isLoading, isError, error } = useUser();
   const { mutate: createTimetable, isPending: isCreating } =
     useCreateTimetable();
+  useSkeletonCrossfade("home");
 
   const sharedId = useSyncExternalStore(
     subscribeSharedTimetable,

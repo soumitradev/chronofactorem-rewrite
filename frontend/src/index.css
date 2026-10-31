@@ -237,6 +237,30 @@
     animation-duration: var(--d-3);
   }
 
+  /* render toasts above everything */
+  html:active-view-transition-type(
+    forward,
+    back,
+    panel-forward,
+    panel-back,
+    view-morph,
+    orient,
+    day-next,
+    day-prev
+  ) .toast-viewport {
+    view-transition-name: app-toasts;
+  }
+  ::view-transition-group(app-toasts) {
+    z-index: 2;
+    animation: none;
+  }
+  ::view-transition-old(app-toasts) {
+    display: none;
+  }
+  ::view-transition-new(app-toasts) {
+    animation: none;
+  }
+
   /* Home card <-> timetable page shared element (lib/sharedTransition.ts) */
   html:active-view-transition-type(shared-timetable) {
     --vt-timetable-title: timetable-title;
@@ -324,9 +348,23 @@ html.theme-transition * {
   }
 }
 
-/* the timetable page shell arriving after its skeleton */
-@keyframes shell-fade {
+/* content arriving in a skeleton's place (useSkeletonFadeIn) */
+@keyframes skeleton-fade-in {
   from {
+    opacity: 0;
+  }
+}
+
+/* a page skeleton's copy fading out over the page that replaced it
+   (useSkeletonCrossfade); above the phone dock, which it covers too */
+.skeleton-ghost {
+  z-index: 30;
+  pointer-events: none;
+  animation: skeleton-ghost-out var(--d-2) var(--e-in-out) forwards;
+}
+
+@keyframes skeleton-ghost-out {
+  to {
     opacity: 0;
   }
 }
