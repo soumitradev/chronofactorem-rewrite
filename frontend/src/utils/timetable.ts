@@ -27,7 +27,7 @@ export const getFilledTimetableSections = (
   timetable: z.infer<typeof timetableWithSectionsType>,
 ) => {
   const courseMap = new Map(courses.map((x) => [x.id, x] as const));
-  // If course isn't found then mark as unknown course and it'll refetch courses
+  // drop sections whose course isn't loaded yet; hasUnknownCourses refetches them
   return timetable.sections.flatMap((x) => {
     const course = courseMap.get(x.courseId);
     if (!course) return [];
@@ -74,19 +74,13 @@ export const formatCDCWarningsAndOptions = (
 ) => {
   const coursesList = [];
 
-  if (timetable === undefined || courses === undefined) return [];
-
   const cdcs = cdcListFor(timetable);
   if (cdcs === undefined) return [];
 
-  // Code based on temp frontend
   for (let i = 0; i < cdcs.length; i++) {
     if (cdcs[i].includes("/")) {
-      const [depts, codes] = cdcs[i].split(" ");
-      const options: string[] = [];
-      for (let j = 0; j < depts.split("/").length; j++) {
-        options.push(`${depts.split("/")[j]} ${codes.split("/")[j]}`);
-      }
+      const [depts, codes] = cdcs[i].split(" ").map((part) => part.split("/"));
+      const options = depts.map((dept, j) => `${dept} ${codes[j]}`);
       const matchedCourses = courses.filter((e) => options.includes(e.code));
       if (matchedCourses.length === 0) {
         coursesList.push({
@@ -131,7 +125,7 @@ export const formatCDCWarningsAndOptions = (
 
 type Course = z.infer<typeof courseType>;
 
-export type RemainingEntry =
+type RemainingEntry =
   | { kind: "course"; course: Course }
   | { kind: "set"; key: string; options: Course[] };
 
