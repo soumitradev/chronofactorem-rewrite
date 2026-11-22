@@ -103,6 +103,10 @@ export function startThemeTransition(
   transition.finished.then(cleanup, cleanup);
 }
 
+// on the content root of the course list and the picker. Named only during
+// panel slides (index.css), so other transitions don't paint it over the page
+export const PANEL_VT_CLASS = "cf-panel";
+
 export type SurfaceTransition =
   | "day-next"
   | "day-prev"

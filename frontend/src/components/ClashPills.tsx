@@ -1,7 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTimetableState } from "@/context";
-import { panelForward } from "@/lib/panelTransition";
 import { useTimetableNav } from "@/lib/useTimetableNav";
 import { cn } from "@/lib/utils";
 import { badgeVariants } from "./ui/badge";
@@ -56,7 +55,9 @@ export function useExamClashPills(clashing: string[] | null) {
         return {
           key: entry,
           label: exam ? `${code}'s ${exam.toLowerCase()}` : code,
-          onSelect: id ? panelForward(() => openCourse(id)) : undefined,
+          onSelect: id
+            ? () => openCourse(id, { transition: "panel-forward" })
+            : undefined,
         };
       }),
     [clashing, courses, openCourse],

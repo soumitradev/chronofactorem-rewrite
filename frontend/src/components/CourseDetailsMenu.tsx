@@ -11,13 +11,13 @@ import {
 } from "@/data-access/hooks/useTimetableSectionAction";
 import { formatExam, summarizeRoomTimes } from "@/lib/formatTime";
 import { HapticTap, haptic } from "@/lib/haptics";
-import { PANEL_VT_CLASS, panelForward } from "@/lib/panelTransition";
 import { useSkeletonFadeIn } from "@/lib/skeletonFade";
 import { titleCase } from "@/lib/titleCase";
 import { useTypeSlide } from "@/lib/typeSlide";
 import { useSwipe } from "@/lib/useSwipe";
 import { useTimetableNav } from "@/lib/useTimetableNav";
 import { cn } from "@/lib/utils";
+import { PANEL_VT_CLASS } from "@/lib/viewTransitions";
 import {
   ClashingWith,
   ClashPill,
@@ -294,10 +294,13 @@ const CourseDetailsMenu = ({
                               markClashLanding(item.courseId, item.type);
                               setType(item.type);
                             }
-                          : panelForward(() => {
+                          : () => {
                               markClashLanding(item.courseId, item.type);
-                              return openCourse(item.courseId, item.type);
-                            })
+                              openCourse(item.courseId, {
+                                type: item.type,
+                                transition: "panel-forward",
+                              });
+                            }
                       }
                     />
                   ))}

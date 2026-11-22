@@ -6,13 +6,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import WarningsList from "@/components/WarningsList";
 import { useTimetableState } from "@/context";
 import useCourse from "@/data-access/hooks/useCourse";
-import { PANEL_VT_CLASS } from "@/lib/panelTransition";
 import { useSkeletonFadeIn } from "@/lib/skeletonFade";
 import { titleCase } from "@/lib/titleCase";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import { useTimetableNav } from "@/lib/useTimetableNav";
 import { useWarningsSummary } from "@/lib/useWarningsSummary";
 import { cn } from "@/lib/utils";
+import { PANEL_VT_CLASS } from "@/lib/viewTransitions";
 
 type UrlSheet = "courses" | "warnings";
 

@@ -4,7 +4,6 @@ import { useMemo } from "react";
 import type z from "zod";
 import { useTimetableState } from "@/context";
 import { formatExam } from "@/lib/formatTime";
-import { panelForward } from "@/lib/panelTransition";
 import { useTimetableNav } from "@/lib/useTimetableNav";
 import { CourseRow } from "./CourseRow";
 
@@ -60,7 +59,9 @@ export const CourseSearchResults = ({ query }: { query: string }) => {
               course={course}
               clashing={clashing}
               extra={<ExamLines course={course} />}
-              onOpen={panelForward(() => openCourse(course.id))}
+              onOpen={() =>
+                openCourse(course.id, { transition: "panel-forward" })
+              }
             />
           ))}
         </div>

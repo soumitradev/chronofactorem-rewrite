@@ -1,9 +1,9 @@
 import { Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTimetableState } from "@/context";
-import { PANEL_VT_CLASS } from "@/lib/panelTransition";
 import { useTimetableNav } from "@/lib/useTimetableNav";
 import { cn } from "@/lib/utils";
+import { PANEL_VT_CLASS } from "@/lib/viewTransitions";
 import CourseSearchResults from "./CourseSearchResults";
 import { CoursesTab } from "./CoursesTab";
 import ExamTab from "./ExamTab";

@@ -150,14 +150,22 @@ export function useTimetableNav() {
         go((p) => ({ ...p, tab }), { push: false }),
       setExam: (exam: "midsem" | "compre") =>
         go((p) => ({ ...p, exam }), { push: false }),
-      showTab: async (tab: NonNullable<TimetableSearch["tab"]>) => {
+      showTab: async (
+        tab: NonNullable<TimetableSearch["tab"]>,
+        transition?: SurfaceTransition,
+      ) => {
         const { sheet, closed } = coursesSheet();
         // pushed from no sheet or from warnings, so back returns there
         await go((p) => ({ ...stripCourse(p), tab, ...sheet }), {
           push: closed,
+          transition,
         });
       },
-      openCourse: async (courseId: string, type?: SectionType) => {
+      openCourse: async (
+        courseId: string,
+        opts: { type?: SectionType; transition?: SurfaceTransition } = {},
+      ) => {
+        const { type, transition } = opts;
         const { phone, sheet, closed } = coursesSheet();
         // a `type` deep-links a section type; without one the default type
         // shows, or the current one if this course is already open
@@ -170,7 +178,7 @@ export function useTimetableNav() {
         // already showing this course: switch type in place, so back returns
         // to the previous course rather than the previous type
         if (router.latestLocation.search.course === courseId && !closed) {
-          await go(update, { push: false });
+          await go(update, { push: false, transition });
           return;
         }
         // a closed sheet pushes the list first, so back returns to it before
@@ -179,7 +187,7 @@ export function useTimetableNav() {
           await go((p) => ({ ...stripCourse(p), sheet: "courses" }), {
             push: true,
           });
-        await go(update, { push: true });
+        await go(update, { push: true, transition });
       },
       closeCourse: () => back(stripCourse, "panel-back"),
       setType: (type: SectionType) =>
