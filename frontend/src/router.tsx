@@ -1,23 +1,13 @@
 import { QueryClient } from "@tanstack/react-query";
-import { Router, rootRouteWithContext } from "@tanstack/react-router";
+import { Router } from "@tanstack/react-router";
 import { AxiosError } from "axios";
-import authenticatedRoute from "./AuthenticatedRoute";
 import NotFound from "./components/NotFound";
-import { rootSearchSchema } from "./lib/rootSearch";
 import { trackSharedTimetable } from "./lib/sharedTransition";
 import {
   releaseStillNavbar,
   routeTransitionTypes,
 } from "./lib/viewTransitions";
-import RootComponent from "./RootComponent";
-import aboutRoute from "./routes/about";
-import editTimetableRoute from "./routes/edit";
-import editUserProfileRoute from "./routes/editProfile";
-import finalizeTimetableRoute from "./routes/finalize";
-import getDegreesRoute from "./routes/getDegrees";
-import homeRoute from "./routes/home";
-import loginRoute from "./routes/login";
-import viewTimetableRoute from "./routes/view";
+import { routeTree } from "./routes";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,26 +27,6 @@ export const queryClient = new QueryClient({
     },
   },
 });
-
-export const rootRoute = rootRouteWithContext<{
-  queryClient: QueryClient;
-}>()({
-  component: RootComponent,
-  validateSearch: rootSearchSchema,
-});
-
-const routeTree = rootRoute.addChildren([
-  loginRoute,
-  getDegreesRoute,
-  aboutRoute,
-  viewTimetableRoute,
-  authenticatedRoute.addChildren([
-    homeRoute,
-    editUserProfileRoute,
-    editTimetableRoute,
-    finalizeTimetableRoute,
-  ]),
-]);
 
 // Only opt in to view transitions where transition types are supported;
 // otherwise TanStack would transition search-only navigations too.
