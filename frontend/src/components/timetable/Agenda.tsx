@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { hueStyle } from "@/lib/courseHues";
 import { titleCase } from "@/lib/titleCase";
 import { formatClock, formatSlotEnd } from "@/utils/timeFormat";
 import {
@@ -25,11 +26,11 @@ type AgendaProps = {
   onRemove?: (cell: TimetableCell) => void;
 };
 
-const blockClass = "rounded-lg bg-ev";
+const blockClass = "course-tint rounded-md border border-line bg-ev";
 const bodyClass =
-  "flex w-full justify-between gap-2 rounded-lg px-3 pt-[9px] pb-2.5 text-left";
+  "flex w-full items-center justify-between gap-3 rounded-md px-3.5 py-2.5 text-left";
 
-/** `remove` floats a spacer where the editor's × sits so the room clears it. */
+// `remove` pads the right side where the editor's × sits so the room clears it
 function BlockBody({
   cell,
   remove = false,
@@ -40,22 +41,20 @@ function BlockBody({
   return (
     <>
       <span className="min-w-0">
-        <span className="block text-lg leading-snug font-semibold">
+        <span className="block text-[15px] leading-snug font-medium tracking-[-0.01em]">
           {titleCase(cell.name)}
         </span>
-        <span className="block text-sm text-ink-muted">{cell.code}</span>
-      </span>
-      <span className="shrink-0 text-right">
-        <span className="block whitespace-nowrap text-sm font-medium">
-          {remove && (
-            <span aria-hidden="true" className="float-right h-4 w-4" />
-          )}
-          {cell.room}
-        </span>
-        <span className="block text-sm text-ink-muted">
+        <span className="mt-0.5 block font-mono text-xs font-medium text-ink-muted">
           {cell.type}
           {cell.number}
         </span>
+      </span>
+      <span
+        className={`shrink-0 text-right font-mono text-[15px] leading-none font-medium tracking-[-0.02em] text-ink ${
+          remove ? "pr-5" : ""
+        }`}
+      >
+        {cell.room}
       </span>
     </>
   );
@@ -115,10 +114,13 @@ export function Agenda({
   // live blocks carry their morph name (C7); it only applies during a morph
   const named = (cell: TimetableCell) =>
     cell.presence === "leaving" || mode === "export"
-      ? { className: "", style: undefined }
+      ? { className: "", style: hueStyle(cell.hue) }
       : {
           className: "tt-block",
-          style: { "--vt": blockName(cell) } as React.CSSProperties,
+          style: {
+            ...hueStyle(cell.hue),
+            "--vt": blockName(cell),
+          } as React.CSSProperties,
         };
 
   // the 10 minutes after a class are its break, not part of it. during the
@@ -150,7 +152,7 @@ export function Agenda({
             >
               <div className="min-h-0 overflow-hidden">
                 <div className="mb-1.5 grid grid-cols-[64px_1fr] gap-3">
-                  <div className="col-start-2 pt-1 pb-2.5 pl-0.5 text-sm text-ink-faint">
+                  <div className="col-start-2 pt-1 pb-2.5 pl-0.5 font-mono text-xs text-ink-faint">
                     {`Free · ${formatClock(item.from)} – ${formatClock(item.to)}`}
                   </div>
                 </div>
@@ -160,11 +162,11 @@ export function Agenda({
             <div className="tt-row" data-row-presence={item.cell.presence}>
               <div className="min-h-0 overflow-hidden">
                 <div className="relative mb-1.5 grid grid-cols-[64px_1fr] gap-3">
-                  <div className="pt-2.5 text-right">
-                    <div className="whitespace-nowrap text-sm font-medium">
+                  <div className="pt-2.5 text-right font-mono">
+                    <div className="whitespace-nowrap text-xs font-medium">
                       {formatClock(item.cell.hour)}
                     </div>
-                    <div className="whitespace-nowrap text-sm text-ink-faint">
+                    <div className="whitespace-nowrap text-xs text-ink-faint">
                       {formatSlotEnd(item.cell.hour, item.cell.span)}
                     </div>
                   </div>

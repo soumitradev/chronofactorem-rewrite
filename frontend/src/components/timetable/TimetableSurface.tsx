@@ -1,4 +1,7 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { useTheme } from "@/components/ThemeProvider";
+import { useTimetableState } from "@/context";
+import { courseHues as computeCourseHues } from "@/lib/courseHues";
 import { useFadingValue } from "@/lib/sectionPreview";
 import { useNow } from "@/lib/useNow";
 import { useSectionPresence } from "@/lib/useSectionPresence";
@@ -63,16 +66,36 @@ export function TimetableSurface({
   const presence = useSectionPresence(sections, {
     disabled: mode === "export",
   });
+  const {
+    state: { courseHues },
+  } = useTimetableState();
+  const { colorSeed } = useTheme();
+  // keep a removed course's hue while its tiles fade out
+  const lastHues = useRef(new Map<string, number>());
+  useEffect(() => {
+    for (const [code, hue] of courseHues) lastHues.current.set(code, hue);
+  }, [courseHues]);
   const { cells, base } = useMemo(() => {
     const live = presence.filter((p) => p.presence !== "leaving");
     const gone = presence.filter((p) => p.presence === "leaving");
     const kinds = new Map(live.map((p) => [p.section.id, p.presence]));
     const liveGrid = buildTimetableGrid(live.map((p) => p.section));
     const goneGrid = buildTimetableGrid(gone.map((p) => p.section));
+    // a section's courseId holds its course code here
+    const hueOf = (code: string) =>
+      courseHues.get(code) ?? lastHues.current.get(code);
     // leaving cells go first so a replacement paints over the section it replaces
     const cells: TimetableCell[] = [
-      ...goneGrid.cells.map((c) => ({ ...c, presence: "leaving" as const })),
-      ...liveGrid.cells.map((c) => ({ ...c, presence: kinds.get(c.id) })),
+      ...goneGrid.cells.map((c) => ({
+        ...c,
+        hue: hueOf(c.courseId),
+        presence: "leaving" as const,
+      })),
+      ...liveGrid.cells.map((c) => ({
+        ...c,
+        hue: hueOf(c.courseId),
+        presence: kinds.get(c.id),
+      })),
     ];
     return {
       cells,
@@ -81,7 +104,7 @@ export function TimetableSurface({
         hourCount: Math.max(liveGrid.hourCount, goneGrid.hourCount),
       },
     };
-  }, [presence]);
+  }, [presence, courseHues]);
   // a ghost on Saturday or past the last hour grows the grid to fit
   const { dayCount, hourCount } = useMemo(() => {
     if (!ghost.value) return base;
@@ -91,10 +114,14 @@ export function TimetableSurface({
       hourCount: Math.max(base.hourCount, g.hourCount),
     };
   }, [base, ghost.value]);
-  const ghostCells = useMemo(
-    () => (ghost.value ? buildTimetableGrid([ghost.value]).cells : []),
-    [ghost.value],
-  );
+  const ghostCells = useMemo(() => {
+    if (!ghost.value) return [];
+    const code = ghost.value.courseId;
+    const hue =
+      courseHues.get(code) ??
+      computeCourseHues([...courseHues.keys(), code], colorSeed).get(code);
+    return buildTimetableGrid([ghost.value]).cells.map((c) => ({ ...c, hue }));
+  }, [ghost.value, courseHues, colorSeed]);
 
   // the now-line belongs to the live view page only, never the editor or export
   const date = useNow(mode === "view" && !!showNow);

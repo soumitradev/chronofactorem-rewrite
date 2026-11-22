@@ -27,8 +27,7 @@ const listMemory = new Map<string, ListMemory>();
 const reducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-const overline =
-  "px-4 lg:px-0 text-xs font-semibold uppercase tracking-[.07em] text-ink-muted";
+const overline = "px-4 lg:px-0 text-[13px] font-medium text-ink-muted";
 const group =
   "mx-4 mt-2 lg:mx-0 rounded-xl border border-line bg-surface [&>*+*]:border-t [&>*+*]:border-line [&>:first-child]:rounded-t-[calc(var(--radius-xl)-1px)] [&>:last-child]:rounded-b-[calc(var(--radius-xl)-1px)]";
 
@@ -37,7 +36,7 @@ const topIn = (el: Element, list: Element) =>
 
 export function CoursesTab({ editable }: { editable: boolean }) {
   const {
-    state: { timetable, coursesInTimetable, cdcs },
+    state: { timetable, coursesInTimetable, cdcs, courseHues },
   } = useTimetableState();
   const { openCourse } = useTimetableNav();
   const { notFound } = useWarningsSummary();
@@ -186,6 +185,7 @@ export function CoursesTab({ editable }: { editable: boolean }) {
               key={course.id}
               course={course}
               pills={pillsFor(course.id)}
+              hue={courseHues.get(course.code)}
               onOpen={
                 editable ? panelForward(() => openCourse(course.id)) : undefined
               }

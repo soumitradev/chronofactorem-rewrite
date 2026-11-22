@@ -1,3 +1,4 @@
+import { hueStyle } from "@/lib/courseHues";
 import { formatAxisHour } from "@/utils/timeFormat";
 import {
   blockName,
@@ -25,9 +26,10 @@ type WeekGridProps = {
 
 // tiles are size containers: narrow ones (phone) stack dept / number so the
 // number never truncates; from 88px wide (tablet) the code fits on one line
-const tileClass = "relative z-1 min-w-0 overflow-hidden rounded-sm bg-ev";
+const tileClass =
+  "course-tint relative z-1 min-w-0 overflow-hidden rounded-sm border border-line bg-ev";
 const padClass =
-  "flex flex-col justify-start px-[7px] pt-1.5 pb-[5px] text-left leading-[1.15]";
+  "flex size-full flex-col justify-between px-[6px] py-[4px] sm:pt-1.5 sm:pb-[5px] text-left leading-[1.12]";
 
 /**
  * A grid tile's text. `spacer` floats a box of that size at the top right of
@@ -48,30 +50,45 @@ export function TileBody({
   const float = spacer && (
     <span aria-hidden="true" className={`float-right ${spacer}`} />
   );
-  const sub = `${cell.type}${cell.number} · ${cell.room}`;
+  const sec = `${cell.type}${cell.number}`;
   return (
     <>
-      <span className="contents @min-[88px]:hidden">
-        <span
-          className={`block text-xs font-medium text-ink-muted ${
-            reserve ? `truncate ${reserve}` : spacer ? "" : "truncate"
-          }`}
-        >
-          {!reserve && float}
-          {dept}
+      <span className="flex size-full flex-col justify-between @min-[88px]:hidden">
+        <span>
+          <span
+            className={`block text-[9px] leading-none font-medium tracking-[0.02em] text-ink-muted ${
+              reserve ? `truncate ${reserve}` : spacer ? "" : "truncate"
+            }`}
+          >
+            {!reserve && float}
+            {dept}
+          </span>
+          <span
+            data-cell-title=""
+            className="mt-[1px] block truncate text-[11.5px] leading-none font-semibold tracking-[0.01em] text-ink"
+          >
+            {number}
+          </span>
         </span>
-        <span className="block truncate text-base font-semibold">{number}</span>
-        <span className="block truncate text-xs text-ink-muted">{sub}</span>
+        <span className="block truncate font-mono text-[10px] leading-none font-normal text-ink/75">
+          {cell.room}
+        </span>
       </span>
-      <span className="hidden @min-[88px]:contents">
-        <span
-          className={`block text-base font-semibold ${spacer ? "" : "truncate"}`}
-        >
-          {float}
-          {cell.code}
+      <span className="hidden size-full flex-col justify-between @min-[88px]:flex">
+        <span>
+          <span
+            data-cell-title=""
+            className={`block text-[12.5px] leading-tight font-semibold tracking-[0.01em] ${spacer ? "" : "truncate"}`}
+          >
+            {float}
+            {cell.code}
+          </span>
+          <span className="mt-0.5 block font-mono text-[10.5px] font-medium text-ink-muted">
+            {sec}
+          </span>
         </span>
-        <span className="mt-0.5 block truncate text-xs text-ink-muted">
-          {sub}
+        <span className="block truncate font-mono text-[13px] leading-none font-medium tracking-[-0.03em] text-ink">
+          {cell.room}
         </span>
       </span>
     </>
@@ -90,8 +107,8 @@ export function WeekGrid({
 }: WeekGridProps) {
   return (
     <div
-      // rows grow from 48px to 64px on tablets, where the tiles are wide
-      className="tt-week relative grid gap-x-[3px] gap-y-1.5 px-2.5 py-1 [--tt-row:48px] sm:[--tt-row:64px]"
+      // rows grow from 50px to 64px on tablets, where the tiles are wide
+      className="tt-week relative grid gap-x-[3px] gap-y-[5px] sm:gap-y-1.5 px-2.5 py-1 [--tt-row:50px] sm:[--tt-row:64px]"
       style={{
         gridTemplateColumns: `40px repeat(${dayCount}, minmax(0, 1fr))`,
         gridTemplateRows: `22px repeat(${hourCount}, var(--tt-row))`,
@@ -100,7 +117,7 @@ export function WeekGrid({
       {timetableDayNames.slice(0, dayCount).map((name, d) => (
         <div
           key={name}
-          className="self-end pb-1 text-center text-xs font-semibold tracking-[.06em] text-ink-muted uppercase"
+          className="self-end pb-1 text-center font-mono text-[11px] font-medium text-ink-muted"
           style={{ gridColumn: d + 2, gridRow: 1 }}
         >
           {name.slice(0, 3)}
@@ -110,11 +127,11 @@ export function WeekGrid({
         <div key={`hour-${h}`} className="contents">
           <div
             aria-hidden="true"
-            className="pointer-events-none -mx-px -translate-y-[3.5px] self-start border-gridline border-t"
+            className="pointer-events-none -mx-px -translate-y-[3px] sm:-translate-y-[3.5px] self-start border-gridline border-t"
             style={{ gridColumn: "2 / -1", gridRow: h + 2 }}
           />
           <div
-            className="pr-1 text-right text-xs whitespace-nowrap text-ink-faint"
+            className="pr-1 text-right font-mono text-[11px] whitespace-nowrap text-ink-faint"
             style={{
               gridColumn: 1,
               gridRow: h + 2,
@@ -140,6 +157,7 @@ export function WeekGrid({
         const placement = {
           gridColumn: cell.day + 2,
           gridRow: `${cell.hour + 2} / span ${cell.span}`,
+          ...hueStyle(cell.hue),
           ...(named ? { "--vt": blockName(cell) } : {}),
         } as React.CSSProperties;
         const nameClass = named ? "tt-block" : "";
