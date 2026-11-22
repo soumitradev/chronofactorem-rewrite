@@ -14,6 +14,10 @@ export const removeCourseExamTimes = (
   courseCode: string,
 ) => examTimes.filter((examTime) => examTime.split("|")[0] !== courseCode);
 
+// exam times are Dates from the database and ISO strings from request bodies
+const toISO = (d: Date | string | null) =>
+  d === null ? undefined : new Date(d).toISOString();
+
 export const checkForExamTimingsChange = (
   timetable: Timetable,
   course: Course,
@@ -30,10 +34,10 @@ export const checkForExamTimingsChange = (
   const compreTimes = findExamTimes("COMPRE");
 
   return (
-    midsemTimes?.[2] !== `${course.midsemStartTime}` ||
-    midsemTimes?.[3] !== `${course.midsemEndTime}` ||
-    compreTimes?.[2] !== `${course.compreStartTime}` ||
-    compreTimes?.[3] !== `${course.compreEndTime}`
+    midsemTimes?.[2] !== toISO(course.midsemStartTime) ||
+    midsemTimes?.[3] !== toISO(course.midsemEndTime) ||
+    compreTimes?.[2] !== toISO(course.compreStartTime) ||
+    compreTimes?.[3] !== toISO(course.compreEndTime)
   );
 };
 
@@ -102,12 +106,12 @@ export const removeSectionFromTimetable = (
 export const addExamTimings = (examTimes: string[], course: Course) => {
   if (course.midsemStartTime !== null && course.midsemEndTime !== null) {
     examTimes.push(
-      `${course.code}|MIDSEM|${course.midsemStartTime.toISOString()}|${course.midsemEndTime.toISOString()}`,
+      `${course.code}|MIDSEM|${toISO(course.midsemStartTime)}|${toISO(course.midsemEndTime)}`,
     );
   }
   if (course.compreStartTime !== null && course.compreEndTime !== null) {
     examTimes.push(
-      `${course.code}|COMPRE|${course.compreStartTime.toISOString()}|${course.compreEndTime.toISOString()}`,
+      `${course.code}|COMPRE|${toISO(course.compreStartTime)}|${toISO(course.compreEndTime)}`,
     );
   }
 };
