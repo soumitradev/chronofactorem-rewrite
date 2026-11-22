@@ -9,13 +9,16 @@ import { env } from "../../config/server.js";
 import { AppDataSource } from "../../db.js";
 import { Course, Section, Timetable } from "../../entity/entities.js";
 import { validate } from "../../middleware/zodValidateRequest.js";
-import { checkForExamTimingsChange } from "../../utils/checkForChange.js";
 import {
+  addExamTimings,
   checkForClassHoursClash,
   checkForExamHoursClash,
-} from "../../utils/checkForClashes.js";
-import { addExamTimings, removeSection } from "../../utils/updateSection.js";
-import { updateSectionWarnings } from "../../utils/updateWarnings.js";
+  checkForExamTimingsChange,
+  formatSectionTimings,
+  removeCourseExamTimes,
+  removeSectionFromTimetable,
+  updateSectionWarnings,
+} from "../../utils/timetableDomain.js";
 import { getCourseSectionTypes } from "./helpers.js";
 
 const dataSchema = z.object({
@@ -66,9 +69,10 @@ export const updateChangedTimetable = async (req: Request, res: Response) => {
       // For each timetable, check if the exam times have changed
       if (checkForExamTimingsChange(timetable, course)) {
         // If they have, remove the course's exams from the timings
-        timetable.examTimes = timetable.examTimes.filter((examTime) => {
-          return examTime.split("|")[0] !== course?.code;
-        });
+        timetable.examTimes = removeCourseExamTimes(
+          timetable.examTimes,
+          course.code,
+        );
 
         // Convert exam dates to actual dates from strings, since the
         // checkForExamHoursClash() function compares them with dates
@@ -94,7 +98,7 @@ export const updateChangedTimetable = async (req: Request, res: Response) => {
               .relation(Timetable, "sections")
               .of(timetable)
               .remove(sec);
-            removeSection(timetable, sec);
+            removeSectionFromTimetable(timetable, sec);
           }
           // Since the timetable has been changed, make it a draft
           timetable.draft = true;
@@ -112,7 +116,7 @@ export const updateChangedTimetable = async (req: Request, res: Response) => {
 
         if (newSection !== undefined) {
           // Start off by removing the existing section, both in DB and the timings column of the timetable
-          removeSection(timetable, section);
+          removeSectionFromTimetable(timetable, section);
           await manager
             .createQueryBuilder()
             .relation(Timetable, "sections")
@@ -134,10 +138,7 @@ export const updateChangedTimetable = async (req: Request, res: Response) => {
             );
           } else {
             // If there is no clash, add the new section timings to the timetable
-            const newTimes: string[] = newSection.roomTime.map(
-              (time) =>
-                `${course?.code}:${time.split(":")[2]}${time.split(":")[3]}`,
-            );
+            const newTimes = formatSectionTimings(course.code, newSection);
             // Add the section back to the timetable
             await manager
               .createQueryBuilder()
@@ -160,9 +161,10 @@ export const updateChangedTimetable = async (req: Request, res: Response) => {
         },
       );
       if (sameCourseSections.length === 0) {
-        timetable.examTimes = timetable.examTimes.filter((examTime) => {
-          return examTime.split("|")[0] !== course?.code;
-        });
+        timetable.examTimes = removeCourseExamTimes(
+          timetable.examTimes,
+          course.code,
+        );
       }
     }
 

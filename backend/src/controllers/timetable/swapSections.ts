@@ -9,14 +9,14 @@ import {
   timetableRepository,
 } from "../../repositories/index.js";
 import {
+  addExamTimings,
   checkForClassHoursClash,
   checkForExamHoursClash,
-} from "../../utils/checkForClashes.js";
-import {
-  addExamTimings,
-  removeSection as removeSectionFromTimetable,
-} from "../../utils/updateSection.js";
-import { updateSectionWarnings } from "../../utils/updateWarnings.js";
+  formatSectionTimings,
+  removeCourseExamTimes,
+  removeSectionFromTimetable,
+  updateSectionWarnings,
+} from "../../utils/timetableDomain.js";
 import { getCourseSectionTypes, loadTimetableContext } from "./helpers.js";
 
 const dataSchema = z.object({
@@ -110,9 +110,10 @@ export const swapSections = async (req: Request, res: Response) => {
 
   // remove course's exam timings if no other sections of this course in TT
   if (sameCourseSections.length === 1) {
-    timetable.examTimes = timetable.examTimes.filter((examTime) => {
-      return examTime.split("|")[0] !== course?.code;
-    });
+    timetable.examTimes = removeCourseExamTimes(
+      timetable.examTimes,
+      course.code,
+    );
   }
 
   removeSectionFromTimetable(timetable, section);
@@ -173,9 +174,7 @@ export const swapSections = async (req: Request, res: Response) => {
     timetable.warnings,
   );
 
-  const newTimes: string[] = newSection.roomTime.map(
-    (time) => `${newCourse?.code}:${time.split(":")[2]}${time.split(":")[3]}`,
-  );
+  const newTimes = formatSectionTimings(newCourse.code, newSection);
 
   const newExamTimes = timetable.examTimes;
   addExamTimings(newExamTimes, newCourse);

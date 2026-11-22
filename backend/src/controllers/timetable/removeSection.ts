@@ -8,8 +8,11 @@ import {
   sectionRepository,
   timetableRepository,
 } from "../../repositories/index.js";
-import { removeSection as removeSectionFromTimetable } from "../../utils/updateSection.js";
-import { updateSectionWarnings } from "../../utils/updateWarnings.js";
+import {
+  removeCourseExamTimes,
+  removeSectionFromTimetable,
+  updateSectionWarnings,
+} from "../../utils/timetableDomain.js";
 import { getCourseSectionTypes, loadTimetableContext } from "./helpers.js";
 
 const dataSchema = z.object({
@@ -77,9 +80,10 @@ export const removeSection = async (req: Request, res: Response) => {
 
   // remove course's exam timings if no other sections of this course in TT
   if (sameCourseSections.length === 1) {
-    timetable.examTimes = timetable.examTimes.filter((examTime) => {
-      return examTime.split("|")[0] !== course?.code;
-    });
+    timetable.examTimes = removeCourseExamTimes(
+      timetable.examTimes,
+      course.code,
+    );
   }
 
   const sectionTypes = await getCourseSectionTypes(
