@@ -465,9 +465,13 @@ html.theme-transition * {
   }
 }
 
-/* content arriving in a skeleton's place (useSkeletonFadeIn) */
-@keyframes skeleton-fade-in {
+@keyframes fade-in {
   from {
+    opacity: 0;
+  }
+}
+@keyframes fade-out {
+  to {
     opacity: 0;
   }
 }
@@ -477,13 +481,7 @@ html.theme-transition * {
 .skeleton-ghost {
   z-index: 30;
   pointer-events: none;
-  animation: skeleton-ghost-out var(--d-2) var(--e-in-out) forwards;
-}
-
-@keyframes skeleton-ghost-out {
-  to {
-    opacity: 0;
-  }
+  animation: fade-out var(--d-2) var(--e-in-out) forwards;
 }
 
 @keyframes skeleton-sweep {
@@ -549,24 +547,25 @@ html.theme-transition * {
     transform: translateY(-6px);
   }
 }
-@keyframes cf-panel-out-forward {
+/* a pane sliding a whole width (plus --pane-gap) out of or into view */
+@keyframes slide-to-left {
   to {
-    transform: translateX(calc(-100% - var(--cf-panel-gap, 0px)));
+    transform: translateX(calc(-100% - var(--pane-gap, 0px)));
   }
 }
-@keyframes cf-panel-in-forward {
+@keyframes slide-from-right {
   from {
-    transform: translateX(calc(100% + var(--cf-panel-gap, 0px)));
+    transform: translateX(calc(100% + var(--pane-gap, 0px)));
   }
 }
-@keyframes cf-panel-out-back {
+@keyframes slide-to-right {
   to {
-    transform: translateX(calc(100% + var(--cf-panel-gap, 0px)));
+    transform: translateX(calc(100% + var(--pane-gap, 0px)));
   }
 }
-@keyframes cf-panel-in-back {
+@keyframes slide-from-left {
   from {
-    transform: translateX(calc(-100% - var(--cf-panel-gap, 0px)));
+    transform: translateX(calc(-100% - var(--pane-gap, 0px)));
   }
 }
 .cf-ring-pulse::after {
@@ -590,8 +589,8 @@ html.theme-transition * {
   }
   /* phone panels are inset 16px a side; desktop ones touch without a gap */
   @media (min-width: 1024px) {
-    :root {
-      --cf-panel-gap: 32px;
+    html:active-view-transition-type(panel-forward, panel-back) {
+      --pane-gap: 32px;
     }
   }
   /* no cross-fade, so drop the UA's plus-lighter blend */
@@ -602,18 +601,18 @@ html.theme-transition * {
   }
   html:active-view-transition-type(panel-forward) {
     &::view-transition-old(cf-panel) {
-      animation: cf-panel-out-forward var(--d-3) var(--e-out) both;
+      animation: slide-to-left var(--d-3) var(--e-out) both;
     }
     &::view-transition-new(cf-panel) {
-      animation: cf-panel-in-forward var(--d-3) var(--e-out) both;
+      animation: slide-from-right var(--d-3) var(--e-out) both;
     }
   }
   html:active-view-transition-type(panel-back) {
     &::view-transition-old(cf-panel) {
-      animation: cf-panel-out-back var(--d-3) var(--e-out) both;
+      animation: slide-to-right var(--d-3) var(--e-out) both;
     }
     &::view-transition-new(cf-panel) {
-      animation: cf-panel-in-back var(--d-3) var(--e-out) both;
+      animation: slide-from-left var(--d-3) var(--e-out) both;
     }
   }
 }
@@ -723,26 +722,6 @@ html.theme-transition * {
 
 /* Same-route surface transitions (spec §9, C7). Names exist only while their
    transition runs, so route transitions and the export never see them. */
-@keyframes tt-day-out-next {
-  to {
-    transform: translateX(-100%);
-  }
-}
-@keyframes tt-day-in-next {
-  from {
-    transform: translateX(100%);
-  }
-}
-@keyframes tt-day-out-prev {
-  to {
-    transform: translateX(100%);
-  }
-}
-@keyframes tt-day-in-prev {
-  from {
-    transform: translateX(-100%);
-  }
-}
 @keyframes tt-day-scroll-out {
   to {
     transform: translateY(var(--tt-day-scroll, 0px));
@@ -751,16 +730,6 @@ html.theme-transition * {
 @keyframes tt-day-scroll-in {
   from {
     transform: translateY(calc(-1 * var(--tt-day-scroll, 0px)));
-  }
-}
-@keyframes tt-root-out {
-  to {
-    opacity: 0;
-  }
-}
-@keyframes tt-root-in {
-  from {
-    opacity: 0;
   }
 }
 
@@ -809,10 +778,10 @@ html.theme-transition * {
       object-position: top left;
     }
     &::view-transition-old(root) {
-      animation: tt-root-out var(--d-2) var(--e-out) both;
+      animation: fade-out var(--d-2) var(--e-out) both;
     }
     &::view-transition-new(root) {
-      animation: tt-root-in var(--d-2) var(--e-out) both;
+      animation: fade-in var(--d-2) var(--e-out) both;
     }
     /* the grid card is its own group; fade it like the page so the old and
     new axis labels don't overlap mid-morph. the home-card rule covers the
@@ -823,10 +792,10 @@ html.theme-transition * {
       object-fit: none;
     }
     &::view-transition-old(timetable-grid) {
-      animation: tt-root-out var(--d-2) var(--e-out) both;
+      animation: fade-out var(--d-2) var(--e-out) both;
     }
     &::view-transition-new(timetable-grid) {
-      animation: tt-root-in var(--d-2) var(--e-out) both;
+      animation: fade-in var(--d-2) var(--e-out) both;
     }
   }
   html:active-view-transition-type(day-next, day-prev) {
@@ -866,18 +835,18 @@ html.theme-transition * {
   }
   html:active-view-transition-type(day-next) {
     &::view-transition-old(tt-agenda) {
-      animation-name: tt-day-out-next;
+      animation-name: slide-to-left;
     }
     &::view-transition-new(tt-agenda) {
-      animation-name: tt-day-in-next;
+      animation-name: slide-from-right;
     }
   }
   html:active-view-transition-type(day-prev) {
     &::view-transition-old(tt-agenda) {
-      animation-name: tt-day-out-prev;
+      animation-name: slide-to-right;
     }
     &::view-transition-new(tt-agenda) {
-      animation-name: tt-day-in-prev;
+      animation-name: slide-from-left;
     }
   }
 }
