@@ -1,4 +1,8 @@
-import { timetableDays } from "@/utils/timetableGrid";
+import {
+  GRID_START_HOUR,
+  parseRoomTime,
+  timetableDayNames,
+} from "@/utils/timetableGrid";
 
 const clockFormat = new Intl.DateTimeFormat("en-US", {
   hour: "numeric",
@@ -29,11 +33,9 @@ export const formatClock = (d: Date): string => clockFormat.format(d);
 export const formatRange = (start: Date, end: Date): string =>
   `${formatClock(start)} – ${formatClock(end)}`;
 
-const gridStartHour = 8;
-
 // grid hours are 0-based, so hour 0 is the grid's first hour
 const gridTime = (hour: number, minute = 0) =>
-  new Date(2000, 0, 1, gridStartHour + hour, minute);
+  new Date(2000, 0, 1, GRID_START_HOUR + hour, minute);
 
 export const formatAxisHour = (hour: number): string =>
   axisFormat.format(gridTime(hour));
@@ -100,28 +102,15 @@ export function formatRelative(d: Date, now: Date): string {
 
 export const formatDayHeading = (d: Date): string => headingFormat.format(d);
 
-const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-/**
- * Turns `CODE:ROOM:DAY:HOUR` entries (hour 1-based, 1 = 8 AM) into lines such
- * as `Mon, Wed, Fri · 9:00 AM – 9:50 AM · F102`.
- */
+// e.g. `Mon, Wed, Fri · 9:00 AM – 9:50 AM · F102`
 export function summarizeRoomTimes(roomTime: string[]): string[] {
   const hoursByRoomDay = new Map<string, number[]>();
   for (const entry of roomTime) {
-    const parts = entry.split(":");
-    const room = parts[1];
-    // Real data is CODE:ROOM:DAY:HOUR; also accept a fused DAYHOUR (e.g. T6).
-    const [dayName, hourValue] =
-      parts.length >= 4
-        ? [parts[2], parts[3]]
-        : (parts[2]?.match(/^([A-Za-z]+)(\d+)$/)?.slice(1) ?? []);
-    const day = timetableDays.indexOf(dayName);
-    const hour = Number(hourValue);
-    if (day < 0 || !Number.isInteger(hour) || hour < 1) continue;
-    const key = `${room}\u0000${day}`;
+    const slot = parseRoomTime(entry);
+    if (!slot) continue;
+    const key = `${slot.room}\u0000${slot.day}`;
     const list = hoursByRoomDay.get(key) ?? [];
-    if (!list.includes(hour)) list.push(hour);
+    if (!list.includes(slot.hour)) list.push(slot.hour);
     hoursByRoomDay.set(key, list);
   }
 
@@ -156,6 +145,6 @@ export function summarizeRoomTimes(roomTime: string[]): string[] {
     .sort((a, b) => a.days[0] - b.days[0] || a.from - b.from)
     .map(
       (item) =>
-        `${item.days.map((d) => dayLabels[d]).join(", ")} · ${formatSlotStart(item.from - 1)} – ${formatSlotEnd(item.from - 1, item.to - item.from + 1)} · ${item.room}`,
+        `${item.days.map((d) => timetableDayNames[d].slice(0, 3)).join(", ")} · ${formatSlotStart(item.from)} – ${formatSlotEnd(item.from, item.to - item.from + 1)} · ${item.room}`,
     );
 }
