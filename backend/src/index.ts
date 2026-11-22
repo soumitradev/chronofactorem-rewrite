@@ -10,4 +10,7 @@ initializeDataSource()
       `Express server has started on port ${env.BACKEND_PORT}. Open http://localhost:${env.BACKEND_PORT}/ to see results`,
     );
   })
-  .catch((error) => console.log(error));
+  .catch((error) => {
+    console.log(error);
+    process.exitCode = 1;
+  });
