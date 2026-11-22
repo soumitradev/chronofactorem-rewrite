@@ -8,6 +8,7 @@ import { haptic } from "@/lib/haptics";
 import { useTimetableNav } from "@/lib/useTimetableNav";
 import { useWarningsSummary } from "@/lib/useWarningsSummary";
 import { cn } from "@/lib/utils";
+import { prefersReducedMotion } from "@/lib/viewTransitions";
 import { cdcIssueUrl, cdcListFor, getRemainingCdcs } from "@/utils/timetable";
 import { CourseRow, OptionalSet } from "./CourseRow";
 import { group, overline } from "./listStyles";
@@ -23,9 +24,6 @@ type ListMemory = {
 // What each timetable's list looked like when it was last on screen, so a
 // course added from the picker can move from Remaining into Added on return.
 const listMemory = new Map<string, ListMemory>();
-
-const reducedMotion = () =>
-  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const topIn = (el: Element, list: Element) =>
   el.getBoundingClientRect().top - list.getBoundingClientRect().top;
@@ -64,7 +62,7 @@ export function CoursesTab({ editable }: { editable: boolean }) {
   const [prev] = useState(() => listMemory.get(timetableId));
   // Sets satisfied while the list was away play their collapse once.
   const [exiting, setExiting] = useState<Set<string>>(() => {
-    if (!prev || reducedMotion()) return new Set();
+    if (!prev || prefersReducedMotion()) return new Set();
     const now = new Set(
       remaining.flatMap((e) => (e.kind === "set" ? [e.key] : [])),
     );
@@ -80,7 +78,7 @@ export function CoursesTab({ editable }: { editable: boolean }) {
   useLayoutEffect(() => {
     const list = listRef.current;
     const addedGroup = addedRef.current;
-    if (!prev || !list || !addedGroup || reducedMotion()) return;
+    if (!prev || !list || !addedGroup || prefersReducedMotion()) return;
     for (const course of coursesInTimetable) {
       const from = prev.remaining.get(course.id);
       if (from === undefined || prev.added.has(course.id)) continue;
