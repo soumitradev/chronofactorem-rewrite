@@ -4,7 +4,6 @@ import timetableJSON from "./timetable.json" with { type: "json" };
 
 initializeDataSource()
   .then(async () => {
-    // create a query runner to make it easier to create transactions across typeorm function calls
     console.log("connecting to db...");
     const queryRunner = AppDataSource.createQueryRunner();
     await queryRunner.connect();

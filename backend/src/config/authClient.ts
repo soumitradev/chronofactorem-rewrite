@@ -3,7 +3,6 @@ import { env } from "./server.js";
 
 let config: client.Configuration | null = null;
 
-// initializes and returns the logto oidc client
 export async function getConfig() {
   if (!config) {
     // logto's issuer is the endpoint base + /oidc

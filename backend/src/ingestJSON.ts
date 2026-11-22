@@ -58,7 +58,6 @@ export const ingestJSON = async (
         semester: latestCourse.semester,
       };
 
-      // Do some basic year and semester checking
       if (latestCourse.acadYear > year) {
         console.error(
           `error: timetable.json is outdated; latest course academic year is ${latestCourse.acadYear} while the timetable is of academic year ${year}`,
@@ -77,7 +76,6 @@ export const ingestJSON = async (
           );
         }
         if (latestCourse.semester === semester) {
-          // If forceOverwrite is not set, then show error
           if (!forceOverwrite) {
             console.log(
               `error: timetable.json is of same semester; latest course academic year is ${latestCourse.acadYear} and semester is ${latestCourse.semester} while the timetable is of academic year ${year} and semester ${semester}`,
@@ -94,7 +92,6 @@ export const ingestJSON = async (
             return;
           }
 
-          // Else, delete old timetables and courses
           console.log(
             "WARNING: overwriting will wipe all courses, sections, and timetables for that combination of academic year and semester",
           );
@@ -130,7 +127,6 @@ export const ingestJSON = async (
         }
       }
 
-      // Overwriting and checking validity of ingestion is done, so now run normal ingestion
       console.log("marking all old courses as archived...");
       const archivedCoursesUpdateResult = await manager.update(
         Course,
@@ -266,7 +262,6 @@ export const ingestJSON = async (
     console.log("sections inserted!");
 
     await queryRunner.commitTransaction();
-    // show summary of the transaction
     console.log("================= SUMMARY =================");
     console.log(`courses archived: ${archivedCoursesUpdateCount}`);
     console.log(`timetables archived: ${archivedTimetablesUpdateCount}`);
@@ -277,7 +272,6 @@ export const ingestJSON = async (
     console.log(`sections inserted: ${sectionInsertResult.identifiers.length}`);
     console.timeEnd("ingestion took");
   } catch (err) {
-    // since we have errors let's rollback changes we made
     await queryRunner.rollbackTransaction();
     console.log(`error! err: ${err}`);
   }
