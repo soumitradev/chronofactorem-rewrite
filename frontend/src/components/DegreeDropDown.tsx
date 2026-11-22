@@ -11,6 +11,51 @@ import {
   SelectValue,
 } from "./ui/select";
 
+const DEGREES: Record<string, string> = {
+  A1: "B.E. Chemical",
+  A2: "B.E. Civil",
+  A3: "B.E. Electrical & Electronics",
+  A4: "B.E. Mechanical",
+  A5: "B. Pharmacy",
+  A7: "B.E. Computer Science",
+  A8: "B.E. Electronics & Instrumentation",
+  AA: "B.E. Electronics & Communication",
+  AD: "B.E. Mathematics & Computing",
+  AJ: "B.E. Environmental and Sustainability",
+  B1: "M.Sc. Biology",
+  B2: "M.Sc. Chemistry",
+  B3: "M.Sc. Economics",
+  B4: "M.Sc. Mathematics",
+  B5: "M.Sc. Physics",
+  B7: "M.Sc. Semiconductor and Nanoscience",
+};
+
+const FIRST_SINGLE = ["A1", "A2", "A3", "A4", "A5", "A7", "A8", "AA", "AD"];
+const SECOND_SINGLE = ["A1", "A2", "A3", "A4", "A7", "A8", "AA", "AD", "AJ"];
+const DUAL = ["B1", "B2", "B3", "B4", "B5", "B7"];
+
+function DegreeGroup({
+  label,
+  codes,
+  children,
+}: {
+  label: string;
+  codes: string[];
+  children?: React.ReactNode;
+}) {
+  return (
+    <SelectGroup>
+      <SelectLabel>{label}</SelectLabel>
+      {children}
+      {codes.map((code) => (
+        <SelectItem key={code} value={code}>
+          {`${code}: ${DEGREES[code]}`}
+        </SelectItem>
+      ))}
+    </SelectGroup>
+  );
+}
+
 const DegreeDropDown = ({
   firstDegree,
   secondDegree,
@@ -43,37 +88,8 @@ const DegreeDropDown = ({
             <SelectValue placeholder="Select a degree" />
           </SelectTrigger>
           <SelectContent>
-            <SelectGroup>
-              <SelectLabel>Single Degrees</SelectLabel>
-              <SelectItem value="A1">A1: B.E. Chemical</SelectItem>
-              <SelectItem value="A2">A2: B.E. Civil</SelectItem>
-              <SelectItem value="A3">
-                A3: B.E. Electrical & Electronics
-              </SelectItem>
-              <SelectItem value="A4">A4: B.E. Mechanical</SelectItem>
-              <SelectItem value="A5">A5: B. Pharmacy</SelectItem>
-              <SelectItem value="A7">A7: B.E. Computer Science</SelectItem>
-              <SelectItem value="A8">
-                A8: B.E. Electronics & Instrumentation
-              </SelectItem>
-              <SelectItem value="AA">
-                AA: B.E. Electronics & Communication
-              </SelectItem>
-              <SelectItem value="AD">
-                AD: B.E. Mathematics & Computing
-              </SelectItem>
-            </SelectGroup>
-            <SelectGroup>
-              <SelectLabel>Dual Degrees</SelectLabel>
-              <SelectItem value="B1">B1: M.Sc. Biology</SelectItem>
-              <SelectItem value="B2">B2: M.Sc. Chemistry</SelectItem>
-              <SelectItem value="B3">B3: M.Sc. Economics</SelectItem>
-              <SelectItem value="B4">B4: M.Sc. Mathematics</SelectItem>
-              <SelectItem value="B5">B5: M.Sc. Physics</SelectItem>
-              <SelectItem value="B7">
-                B7: M.Sc. Semiconductor and Nanoscience
-              </SelectItem>
-            </SelectGroup>
+            <DegreeGroup label="Single Degrees" codes={FIRST_SINGLE} />
+            <DegreeGroup label="Dual Degrees" codes={DUAL} />
           </SelectContent>
         </Select>
       </div>
@@ -102,30 +118,10 @@ const DegreeDropDown = ({
                 <SelectValue placeholder="Select a degree" />
               </SelectTrigger>
               <SelectContent>
-                <SelectGroup>
-                  <SelectLabel>Single Degrees</SelectLabel>
-                  {/* A0 is used for single degree MSc people since empty string denotes no selection */}
+                <DegreeGroup label="Single Degrees" codes={SECOND_SINGLE}>
+                  {/* A0 marks single-degree M.Sc., since "" means no selection */}
                   <SelectItem value="A0">None (Single degree M.Sc.)</SelectItem>
-                  <SelectItem value="A1">A1: B.E. Chemical</SelectItem>
-                  <SelectItem value="A2">A2: B.E. Civil</SelectItem>
-                  <SelectItem value="A3">
-                    A3: B.E. Electrical & Electronics
-                  </SelectItem>
-                  <SelectItem value="A4">A4: B.E. Mechanical</SelectItem>
-                  <SelectItem value="A7">A7: B.E. Computer Science</SelectItem>
-                  <SelectItem value="A8">
-                    A8: B.E. Electronics & Instrumentation
-                  </SelectItem>
-                  <SelectItem value="AA">
-                    AA: B.E. Electronics & Communication
-                  </SelectItem>
-                  <SelectItem value="AD">
-                    AD: B.E. Mathematics & Computing
-                  </SelectItem>
-                  <SelectItem value="AJ">
-                    AJ: B.E. Environmental and Sustainability
-                  </SelectItem>
-                </SelectGroup>
+                </DegreeGroup>
               </SelectContent>
             </Select>
           </div>
