@@ -77,6 +77,9 @@ export const updateChangedTimetable = async (req: Request, res: Response) => {
               .remove(sec);
             removeSectionFromTimetable(timetable, sec);
           }
+          timetable.warnings = timetable.warnings.filter(
+            (warning) => warning.split(":")[0] !== course.code,
+          );
           // a changed timetable has to be checked and published again
           timetable.draft = true;
           timetable.private = true;
