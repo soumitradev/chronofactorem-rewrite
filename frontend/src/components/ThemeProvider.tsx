@@ -35,13 +35,6 @@ const readColorSeed = (): number => {
   }
 };
 
-const initialState: ThemeProviderState = {
-  theme: "system",
-  setTheme: () => null,
-  colorSeed: 0,
-  shuffleColors: () => null,
-};
-
 const DARK_QUERY = "(prefers-color-scheme: dark)";
 
 /** The theme the OS currently asks for; follows changes while the page is open. */
@@ -57,7 +50,9 @@ export function useSystemTheme(): "light" | "dark" {
   return dark ? "dark" : "light";
 }
 
-const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
+const ThemeProviderContext = createContext<ThemeProviderState | undefined>(
+  undefined,
+);
 
 export function ThemeProvider({
   children,

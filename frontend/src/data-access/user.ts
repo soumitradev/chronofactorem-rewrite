@@ -1,10 +1,6 @@
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
-import type {
-  announcementWithIDType,
-  timetableType,
-  userWithTimetablesType,
-} from "lib";
+import type { announcementWithIDType, userWithTimetablesType } from "lib";
 import type z from "zod";
 import chronoAPI, { useApiMutation } from "./axios";
 
@@ -24,33 +20,6 @@ export const authStatusQueryOptions = queryOptions({
   queryFn: () => fetchUserAuthStatus(),
 });
 
-type Timetable = z.infer<typeof timetableType>;
-const filterTimetables = (timetables: Timetable[]) => {
-  const publicTimetables: Timetable[] = [];
-  const privateTimetables: Timetable[] = [];
-  const draftTimetables: Timetable[] = [];
-  const archivedTimetables: Timetable[] = [];
-
-  for (const timetable of timetables) {
-    if (timetable.archived) {
-      archivedTimetables.push(timetable);
-    } else if (timetable.draft) {
-      draftTimetables.push(timetable);
-    } else if (timetable.private) {
-      privateTimetables.push(timetable);
-    } else {
-      publicTimetables.push(timetable);
-    }
-  }
-
-  return {
-    publicTimetables,
-    privateTimetables,
-    draftTimetables,
-    archivedTimetables,
-  };
-};
-
 const fetchUserDetails = async (): Promise<
   z.infer<typeof userWithTimetablesType>
 > => {
@@ -68,9 +37,6 @@ export const userQueryOptions = queryOptions({
       return false;
     }
     return failureCount < 3;
-  },
-  select: (data) => {
-    return { ...data, ...filterTimetables(data.timetables) };
   },
 });
 

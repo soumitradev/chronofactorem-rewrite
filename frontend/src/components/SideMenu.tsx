@@ -10,13 +10,7 @@ import ExamTab from "./ExamTab";
 import { Input } from "./ui/input";
 import { Tabs } from "./ui/tabs";
 
-export function SideMenu({
-  isOnEditPage,
-  isScreenshotMode,
-}: {
-  isOnEditPage: boolean;
-  isScreenshotMode: boolean;
-}) {
+export function SideMenu({ isOnEditPage }: { isOnEditPage: boolean }) {
   const {
     state: { timetable, currentTab, searchTerm, coursesInTimetable },
   } = useTimetableState();
@@ -49,14 +43,6 @@ export function SideMenu({
   };
 
   if (timetable === undefined) return;
-
-  if (isScreenshotMode) {
-    return (
-      <div className="flex h-full min-h-0 flex-col">
-        <ExamTab all />
-      </div>
-    );
-  }
 
   // The view page has no search, so a stray ?q= is ignored there.
   const searching = isOnEditPage && searchTerm.trim() !== "";
