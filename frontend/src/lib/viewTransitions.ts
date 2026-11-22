@@ -109,35 +109,20 @@ export function startThemeTransition(
     return;
   }
   const root = document.documentElement;
-  root.classList.add("theme-transition");
-  const transition = document.startViewTransition(apply);
   const radius = Math.hypot(
     Math.max(origin.x, window.innerWidth - origin.x),
     Math.max(origin.y, window.innerHeight - origin.y),
   );
-  const style = getComputedStyle(root);
-  const duration = style.getPropertyValue("--d-4").trim() || "480ms";
-  const easing = style.getPropertyValue("--e-in-out").trim() || "ease-in-out";
-  transition.ready
-    .then(() => {
-      root.animate(
-        {
-          clipPath: [
-            `circle(0px at ${origin.x}px ${origin.y}px)`,
-            `circle(${radius}px at ${origin.x}px ${origin.y}px)`,
-          ],
-        },
-        {
-          duration:
-            Number.parseFloat(duration) * (duration.endsWith("ms") ? 1 : 1000),
-          easing,
-          fill: "forwards",
-          pseudoElement: "::view-transition-new(root)",
-        },
-      );
-    })
-    .catch(() => {});
-  const cleanup = () => root.classList.remove("theme-transition");
+  root.style.setProperty("--rx", `${origin.x}px`);
+  root.style.setProperty("--ry", `${origin.y}px`);
+  root.style.setProperty("--rr", `${radius}px`);
+  root.classList.add("theme-transition");
+  const transition = document.startViewTransition(apply);
+  const cleanup = () => {
+    root.classList.remove("theme-transition");
+    for (const name of ["--rx", "--ry", "--rr"])
+      root.style.removeProperty(name);
+  };
   transition.finished.then(cleanup, cleanup);
 }
 

@@ -383,7 +383,8 @@
   }
 }
 
-/* Theme change: circular reveal is driven from JS on the new snapshot */
+/* Theme change: the new snapshot grows as a circle from the toggle
+   (startThemeTransition sets --rx, --ry and --rr) */
 html.theme-transition::view-transition-old(root),
 html.theme-transition::view-transition-new(root) {
   animation: none;
@@ -394,9 +395,15 @@ html.theme-transition::view-transition-old(root) {
 }
 html.theme-transition::view-transition-new(root) {
   z-index: 1;
-  /* hidden until the reveal starts, which can be a frame after the
-     snapshots first paint */
-  clip-path: circle(0);
+  animation: theme-reveal var(--d-4) var(--e-in-out) both;
+}
+@keyframes theme-reveal {
+  from {
+    clip-path: circle(0px at var(--rx) var(--ry));
+  }
+  to {
+    clip-path: circle(var(--rr) at var(--rx) var(--ry));
+  }
 }
 
 html.theme-transition * {
