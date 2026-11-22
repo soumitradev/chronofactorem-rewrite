@@ -10,14 +10,12 @@ type userAuthStatusType = {
   error?: string;
 };
 
-const fetchUserAuthStatus = async (): Promise<userAuthStatusType> => {
-  const response = await chronoAPI.get("/api/auth/check");
-  return response.data;
-};
-
 export const authStatusQueryOptions = queryOptions({
   queryKey: ["authStatusCheck"],
-  queryFn: () => fetchUserAuthStatus(),
+  queryFn: async (): Promise<userAuthStatusType> => {
+    const response = await chronoAPI.get("/api/auth/check");
+    return response.data;
+  },
 });
 
 const fetchUserDetails = async (): Promise<
