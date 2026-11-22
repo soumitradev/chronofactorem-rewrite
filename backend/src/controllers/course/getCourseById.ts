@@ -13,27 +13,14 @@ const dataSchema = z.object({
 export const getCourseByIdValidator = validate(dataSchema);
 
 export const getCourseById = async (req: Request, res: Response) => {
-  const logger = req.log;
-  try {
-    const id = req.params.id as string;
-    const course = await courseRepository
-      .createQueryBuilder("course")
-      .where("course.id = :id", { id })
-      .leftJoinAndSelect(
-        "course.sections",
-        "section",
-        "section.course = :courseId",
-        { courseId: id },
-      )
-      .getOne();
+  const course = await courseRepository.findOne({
+    where: { id: req.params.id as string },
+    relations: { sections: true },
+  });
 
-    if (!course) {
-      return res.status(404).json({ message: "Course does not exist" });
-    }
-
-    return res.json(course);
-  } catch (error) {
-    logger.error(error);
-    return res.status(500).json({ message: "Internal Server Error" });
+  if (!course) {
+    return res.status(404).json({ message: "Course does not exist" });
   }
+
+  return res.json(course);
 };

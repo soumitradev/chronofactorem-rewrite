@@ -36,16 +36,13 @@ export const editUser = async (req: Request, res: Response) => {
     });
   }
 
-  await userRepository
-    .createQueryBuilder()
-    .update("user")
-    .set({ degrees })
-    .where("id = :id", { id: req.session?.id })
-    .returning("*")
-    .execute()
-    .then((response) => {
-      return response.raw[0].id;
-    });
+  const { affected } = await userRepository.update(
+    { id: req.session?.id },
+    { degrees },
+  );
+  if (affected === 0) {
+    throw new Error(`no user ${req.session?.id} to update`);
+  }
 
   return res.json({ message: "User details updated successfully" });
 };
