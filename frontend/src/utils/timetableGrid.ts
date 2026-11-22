@@ -109,11 +109,13 @@ export function defaultDay(dayCount: number, now: Date): number {
   return 0;
 }
 
+export type NowPosition = { day: number; hour: number; fraction: number };
+
 export function nowPosition(
   now: Date,
   dayCount: number,
   hourCount: number,
-): { day: number; hour: number; fraction: number } | null {
+): NowPosition | null {
   const dow = now.getDay();
   if (dow === 0) return null;
   const day = dow - 1;

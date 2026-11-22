@@ -1,6 +1,5 @@
 import type { CSSProperties } from "react";
-
-type Pos = { day: number; hour: number; fraction: number };
+import type { NowPosition } from "@/utils/timetableGrid";
 
 const dot = "now-dot pointer-events-none absolute size-2.5 rounded-full bg-now";
 
@@ -47,7 +46,7 @@ function ThroughLine({ label, at }: { label: string; at: number }) {
 }
 
 type GridProps = {
-  pos: Pos;
+  pos: NowPosition;
   /** x: desktop rows (time runs across). y: phone week and desktop columns. */
   axis: "x" | "y";
   /** where today's cell for pos.hour sits in the grid */

@@ -9,11 +9,13 @@ import { formatAxisHour } from "@/lib/formatTime";
 import { titleCase } from "@/lib/titleCase";
 import {
   blockProps,
+  type NowPosition,
   type SurfaceMode,
   type TimetableCell,
   timetableDayNames,
 } from "@/utils/timetableGrid";
 import { EmptyState, emptyTimetableHint } from "./EmptyState";
+import { NowLine } from "./NowLine";
 import { OpenButton } from "./OpenButton";
 import { RemoveButton } from "./RemoveButton";
 
@@ -32,8 +34,7 @@ type DeskGridProps = {
   ghostCells?: TimetableCell[];
   ghostVisible?: boolean;
   outgoing?: string | null;
-  /** The now-line slot (C5). */
-  now?: React.ReactNode;
+  now?: NowPosition | null;
 };
 
 // blocks are size containers: under 72px wide they stack dept / number like
@@ -449,7 +450,13 @@ export function DeskGrid({
             {body(cell, true)}
           </div>
         ))}
-      {now}
+      {now && (
+        <NowLine.Grid
+          pos={now}
+          axis={rows ? "x" : "y"}
+          cell={place({ ...now, span: 1 })}
+        />
+      )}
     </div>
   );
 }

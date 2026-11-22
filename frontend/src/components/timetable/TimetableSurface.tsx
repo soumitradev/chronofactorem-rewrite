@@ -16,7 +16,6 @@ import {
 } from "@/utils/timetableGrid";
 import { Agenda } from "./Agenda";
 import { DeskGrid } from "./DeskGrid";
-import { NowLine } from "./NowLine";
 import { WeekGrid } from "./WeekGrid";
 
 export type Orientation = "rows" | "columns";
@@ -168,15 +167,7 @@ export function TimetableSurface({
           pending={pending}
           onOpen={onOpen}
           onRemove={onRemove}
-          now={
-            pos && (
-              <NowLine.Grid
-                pos={pos}
-                axis="y"
-                cell={{ gridColumn: pos.day + 2, gridRow: pos.hour + 2 }}
-              />
-            )
-          }
+          now={pos}
         />
       </section>
     );
@@ -196,19 +187,7 @@ export function TimetableSurface({
         ghostCells={ghostCells}
         ghostVisible={ghost.visible}
         outgoing={ghost.visible ? outgoing : null}
-        now={
-          pos && (
-            <NowLine.Grid
-              pos={pos}
-              axis={orientation === "rows" ? "x" : "y"}
-              cell={
-                orientation === "rows"
-                  ? { gridRow: pos.day + 2, gridColumn: pos.hour + 2 }
-                  : { gridColumn: pos.day + 2, gridRow: pos.hour + 2 }
-              }
-            />
-          )
-        }
+        now={pos}
       />
     </section>
   );

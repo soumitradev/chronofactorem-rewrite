@@ -1,10 +1,12 @@
 import {
   blockProps,
+  type NowPosition,
   type SurfaceMode,
   splitCode,
   type TimetableCell,
 } from "@/utils/timetableGrid";
 import { EmptyState, emptyTimetableHint } from "./EmptyState";
+import { NowLine } from "./NowLine";
 import { OpenButton } from "./OpenButton";
 import { RemoveButton } from "./RemoveButton";
 import { WeekGridFrame } from "./WeekGridFrame";
@@ -20,8 +22,7 @@ type WeekGridProps = {
     event: React.MouseEvent | React.KeyboardEvent,
   ) => void;
   onRemove?: (cell: TimetableCell) => void;
-  /** The now-line slot (C5). */
-  now?: React.ReactNode;
+  now?: NowPosition | null;
 };
 
 // tiles are size containers: narrow ones (phone) stack dept / number so the
@@ -164,7 +165,13 @@ export function WeekGrid({
           </div>
         );
       })}
-      {now}
+      {now && (
+        <NowLine.Grid
+          pos={now}
+          axis="y"
+          cell={{ gridColumn: now.day + 2, gridRow: now.hour + 2 }}
+        />
+      )}
     </WeekGridFrame>
   );
 }
