@@ -11,6 +11,7 @@ import { TimetablePageSkeleton } from "@/components/timetable/TimetablePageSkele
 import { TimetableSurface } from "@/components/timetable/TimetableSurface";
 import { TimetableProvider, useTimetableState } from "@/context";
 import { useAddRemoveTimetableSection } from "@/data-access/timetables";
+import { clashingSections } from "@/lib/sectionClash";
 import {
   SectionPreviewProvider,
   useSectionPreview,
@@ -79,27 +80,15 @@ function EditTimetable() {
     return <ReportIssue error={"Error fetching queries"} />;
   }
 
-  // a section's day and hour, without the course code and room
-  const slot = (roomTime: string) => roomTime.split(":").slice(2).join(":");
-  // The picker reports mouse hovers; ghost the row on the grid unless it is
-  // already in the timetable or clashes with something that is.
+  // the picker reports mouse hovers; ghost the row on the grid unless it is
+  // already in the timetable or clashes with something that is
   const handleSectionHover = (sectionId: string | null) => {
     const section = course?.sections.find((s) => s.id === sectionId);
     if (
       !course ||
       !section ||
-      timetable.sections.some(
-        (item) =>
-          item.id === section.id ||
-          (!(
-            item.courseId === section.courseId && item.type === section.type
-          ) &&
-            item.roomTime.some((existing) =>
-              section.roomTime.some(
-                (incoming) => slot(existing) === slot(incoming),
-              ),
-            )),
-      )
+      timetable.sections.some((item) => item.id === section.id) ||
+      clashingSections(section, timetable.sections).length > 0
     ) {
       setPreview(null);
       return;
