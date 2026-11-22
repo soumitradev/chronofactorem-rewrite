@@ -11,8 +11,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { crc32 } from "node:zlib";
 import sharp from "sharp";
-import { type Change, changesBetween, groupRepeats } from "./changes.js";
-import { synthetics } from "./synthetics.js";
+import { type Change, changesBetween, groupRepeats } from "./changes.ts";
+import { synthetics } from "./synthetics.ts";
 
 // compares a run's screenshots with the baseline (master's screenshots where
 // a pull request branched off, or master's latest on master), and reports
