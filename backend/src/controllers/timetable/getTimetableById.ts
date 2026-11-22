@@ -14,33 +14,27 @@ const dataSchema = z.object({
 export const getTimetableByIdValidator = validate(dataSchema);
 
 export const getTimetableById = async (req: Request, res: Response) => {
-  const logger = req.log;
-  try {
-    const id = req.params.id as string;
-    const dbID = decodeTimetableSqidOr404(req, res);
-    if (dbID === null) {
-      return;
-    }
-
-    const timetable = await timetableRepository
-      .createQueryBuilder("timetable")
-      .leftJoinAndSelect("timetable.sections", "section")
-      .where("timetable.id = :id", { id: dbID[0] })
-      .getOne();
-
-    if (!timetable) {
-      return res.status(404).json({ message: "Timetable does not exist" });
-    }
-
-    // drafts only have a valid edit link, so for anyone but the author a
-    // draft behaves like it does not exist
-    if (timetable.draft && req.session?.id !== timetable.authorId) {
-      return res.status(404).json({ message: "Timetable does not exist" });
-    }
-
-    return res.json({ ...timetable, id: id });
-  } catch (error) {
-    logger.error(error);
-    return res.status(500).json({ message: "Internal Server Error" });
+  const id = req.params.id as string;
+  const dbID = decodeTimetableSqidOr404(req, res);
+  if (dbID === null) {
+    return;
   }
+
+  const timetable = await timetableRepository
+    .createQueryBuilder("timetable")
+    .leftJoinAndSelect("timetable.sections", "section")
+    .where("timetable.id = :id", { id: dbID[0] })
+    .getOne();
+
+  if (!timetable) {
+    return res.status(404).json({ message: "Timetable does not exist" });
+  }
+
+  // drafts only have a valid edit link, so for anyone but the author a
+  // draft behaves like it does not exist
+  if (timetable.draft && req.session?.id !== timetable.authorId) {
+    return res.status(404).json({ message: "Timetable does not exist" });
+  }
+
+  return res.json({ ...timetable, id: id });
 };

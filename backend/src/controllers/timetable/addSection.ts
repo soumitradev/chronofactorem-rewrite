@@ -19,7 +19,6 @@ import {
   fetchAuthorOrError,
   fetchTimetableOrError,
   getCourseSectionTypes,
-  queryOr500,
 } from "./helpers.js";
 
 const dataSchema = z.object({
@@ -34,7 +33,6 @@ const dataSchema = z.object({
 export const addSectionValidator = validate(dataSchema);
 
 export const addSection = async (req: Request, res: Response) => {
-  const logger = req.log;
   const dbID = decodeTimetableSqidOr404(req, res);
   if (dbID === null) {
     return;
@@ -42,39 +40,24 @@ export const addSection = async (req: Request, res: Response) => {
 
   const sectionId = req.body.sectionId;
 
-  const author = await fetchAuthorOrError(
-    req,
-    res,
-    logger,
-    "Error while querying user: ",
-  );
+  const author = await fetchAuthorOrError(req, res);
   if (!author) {
     return;
   }
 
-  const timetable = await fetchTimetableOrError(res, logger, dbID, {
+  const timetable = await fetchTimetableOrError(res, dbID, {
     authorId: author.id,
     joinSections: true,
     mustBeDraft: true,
-    queryErrorLogMessage: "Error while querying timetable: ",
   });
   if (!timetable) {
     return;
   }
 
-  const section = await queryOr500(
-    res,
-    logger,
-    "Error while querying for section: ",
-    () =>
-      sectionRepository
-        .createQueryBuilder("section")
-        .where("section.id = :id", { id: sectionId })
-        .getOne(),
-  );
-  if (section === undefined) {
-    return;
-  }
+  const section = await sectionRepository
+    .createQueryBuilder("section")
+    .where("section.id = :id", { id: sectionId })
+    .getOne();
 
   if (!section) {
     return res.status(404).json({ message: "section not found" });
@@ -82,19 +65,10 @@ export const addSection = async (req: Request, res: Response) => {
 
   const courseId = section.courseId;
 
-  const course = await queryOr500(
-    res,
-    logger,
-    "Error while querying for course: ",
-    () =>
-      courseRepository
-        .createQueryBuilder("course")
-        .where("course.id = :id", { id: courseId })
-        .getOne(),
-  );
-  if (course === undefined) {
-    return;
-  }
+  const course = await courseRepository
+    .createQueryBuilder("course")
+    .where("course.id = :id", { id: courseId })
+    .getOne();
 
   if (!course) {
     return res.status(404).json({ message: "course not found" });
@@ -118,15 +92,10 @@ export const addSection = async (req: Request, res: Response) => {
     });
   }
 
-  const sectionTypes = await queryOr500(
-    res,
-    logger,
-    "Error while querying for course's section types: ",
-    () => getCourseSectionTypes(sectionRepository.manager, courseId),
+  const sectionTypes = await getCourseSectionTypes(
+    sectionRepository.manager,
+    courseId,
   );
-  if (sectionTypes === undefined) {
-    return;
-  }
 
   // the timetable's sections were already loaded with it above, so this
   // check happens in memory, same as in removeSection and swapSections
@@ -160,54 +129,43 @@ export const addSection = async (req: Request, res: Response) => {
   const newExamTimes = timetable.examTimes;
   addExamTimings(newExamTimes, course);
 
-  const updated = await queryOr500(
-    res,
-    logger,
-    "Error while updating timetable with section: ",
-    async () => {
-      await timetableRepository.manager.transaction(
-        async (transactionalEntityManager) => {
-          // shoudn't be needed, but kept them here as it was erroring out
-          if (!course) {
-            return res.status(404).json({ message: "course not found" });
-          }
-          if (!timetable) {
-            return res.status(404).json({ message: "timetable not found" });
-          }
+  await timetableRepository.manager.transaction(
+    async (transactionalEntityManager) => {
+      // shoudn't be needed, but kept them here as it was erroring out
+      if (!course) {
+        return res.status(404).json({ message: "course not found" });
+      }
+      if (!timetable) {
+        return res.status(404).json({ message: "timetable not found" });
+      }
 
-          await transactionalEntityManager
-            .createQueryBuilder()
-            .relation(Timetable, "sections")
-            .of(timetable)
-            .add(section);
+      await transactionalEntityManager
+        .createQueryBuilder()
+        .relation(Timetable, "sections")
+        .of(timetable)
+        .add(section);
 
-          await transactionalEntityManager
-            .createQueryBuilder()
-            .update(Timetable)
-            .set({
-              timings: [...timetable.timings, ...newTimes],
-              warnings: timetable.warnings,
-            })
-            .where("timetable.id = :id", { id: timetable.id })
-            .execute();
+      await transactionalEntityManager
+        .createQueryBuilder()
+        .update(Timetable)
+        .set({
+          timings: [...timetable.timings, ...newTimes],
+          warnings: timetable.warnings,
+        })
+        .where("timetable.id = :id", { id: timetable.id })
+        .execute();
 
-          if (!examHourClashes.sameCourse) {
-            await transactionalEntityManager
-              .createQueryBuilder()
-              .update(Timetable)
-              .set({
-                examTimes: newExamTimes,
-              })
-              .where("timetable.id = :id", { id: timetable.id })
-              .execute();
-          }
-        },
-      );
-      return true;
+      if (!examHourClashes.sameCourse) {
+        await transactionalEntityManager
+          .createQueryBuilder()
+          .update(Timetable)
+          .set({
+            examTimes: newExamTimes,
+          })
+          .where("timetable.id = :id", { id: timetable.id })
+          .execute();
+      }
     },
   );
-  if (updated === undefined) {
-    return;
-  }
   return res.json({ message: "section added" });
 };

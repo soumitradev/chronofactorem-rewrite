@@ -7,7 +7,6 @@ import {
   decodeTimetableSqidOr404,
   fetchAuthorOrError,
   fetchTimetableOrError,
-  queryOr500,
 } from "./helpers.js";
 
 const dataSchema = z.object({
@@ -19,13 +18,7 @@ const dataSchema = z.object({
 export const deleteTimeTableValidator = validate(dataSchema);
 
 export const deleteTimetable = async (req: Request, res: Response) => {
-  const logger = req.log;
-  const author = await fetchAuthorOrError(
-    req,
-    res,
-    logger,
-    "Error while querying user: ",
-  );
+  const author = await fetchAuthorOrError(req, res);
   if (!author) {
     return;
   }
@@ -35,27 +28,17 @@ export const deleteTimetable = async (req: Request, res: Response) => {
     return;
   }
 
-  const timetable = await fetchTimetableOrError(res, logger, dbID, {
+  const timetable = await fetchTimetableOrError(res, dbID, {
     authorId: author.id,
-    queryErrorLogMessage: "Error while querying timetable: ",
   });
   if (!timetable) {
     return;
   }
 
-  const deleted = await queryOr500(
-    res,
-    logger,
-    "Error while deleting timetable: ",
-    () =>
-      timetableRepository
-        .createQueryBuilder("timetable")
-        .delete()
-        .where("timetable.id = :id", { id: timetable.id })
-        .execute(),
-  );
-  if (deleted === undefined) {
-    return;
-  }
+  await timetableRepository
+    .createQueryBuilder("timetable")
+    .delete()
+    .where("timetable.id = :id", { id: timetable.id })
+    .execute();
   return res.json({ message: "timetable deleted" });
 };
