@@ -1,25 +1,17 @@
 import { createHash } from "node:crypto";
-import type { Response } from "express";
+import type { CookieOptions, Response } from "express";
 import jwt from "jsonwebtoken";
 import { env } from "../config/server.js";
 
+const baseCookieOptions: CookieOptions = {
+  domain: new URL(env.FRONTEND_URL).hostname,
+  secure: true,
+  sameSite: "lax",
+};
+
 export const clearAuthCookies = (res: Response) => {
-  res.clearCookie("fingerprint", {
-    httpOnly: true,
-    domain: env.FRONTEND_URL.replace("https://", "")
-      .replace("http://", "")
-      .split(":")[0],
-    secure: true,
-    sameSite: "lax",
-  });
-  res.clearCookie("session", {
-    httpOnly: false,
-    domain: env.FRONTEND_URL.replace("https://", "")
-      .replace("http://", "")
-      .split(":")[0],
-    secure: true,
-    sameSite: "lax",
-  });
+  res.clearCookie("fingerprint", { ...baseCookieOptions, httpOnly: true });
+  res.clearCookie("session", { ...baseCookieOptions, httpOnly: false });
 };
 
 export const setAuthCookies = (
@@ -29,22 +21,14 @@ export const setAuthCookies = (
   maxAge: number,
 ) => {
   res.cookie("session", token, {
-    maxAge: maxAge,
+    ...baseCookieOptions,
+    maxAge,
     httpOnly: false,
-    domain: env.FRONTEND_URL.replace("https://", "")
-      .replace("http://", "")
-      .split(":")[0],
-    secure: true,
-    sameSite: "lax",
   });
   res.cookie("fingerprint", fingerprint, {
-    maxAge: maxAge,
+    ...baseCookieOptions,
+    maxAge,
     httpOnly: true,
-    domain: env.FRONTEND_URL.replace("https://", "")
-      .replace("http://", "")
-      .split(":")[0],
-    secure: true,
-    sameSite: "lax",
   });
 };
 
@@ -84,41 +68,16 @@ export const setPkceCookies = (
   verifier: string,
   state: string,
 ) => {
-  res.cookie("pkce_verifier", verifier, {
+  const options = {
+    ...baseCookieOptions,
     maxAge: PKCE_COOKIE_MAX_AGE_MS,
     httpOnly: true,
-    domain: env.FRONTEND_URL.replace("https://", "")
-      .replace("http://", "")
-      .split(":")[0],
-    secure: true,
-    sameSite: "lax",
-  });
-  res.cookie("pkce_state", state, {
-    maxAge: PKCE_COOKIE_MAX_AGE_MS,
-    httpOnly: true,
-    domain: env.FRONTEND_URL.replace("https://", "")
-      .replace("http://", "")
-      .split(":")[0],
-    secure: true,
-    sameSite: "lax",
-  });
+  };
+  res.cookie("pkce_verifier", verifier, options);
+  res.cookie("pkce_state", state, options);
 };
 
 export const clearPkceCookies = (res: Response) => {
-  res.clearCookie("pkce_verifier", {
-    httpOnly: true,
-    domain: env.FRONTEND_URL.replace("https://", "")
-      .replace("http://", "")
-      .split(":")[0],
-    secure: true,
-    sameSite: "lax",
-  });
-  res.clearCookie("pkce_state", {
-    httpOnly: true,
-    domain: env.FRONTEND_URL.replace("https://", "")
-      .replace("http://", "")
-      .split(":")[0],
-    secure: true,
-    sameSite: "lax",
-  });
+  res.clearCookie("pkce_verifier", { ...baseCookieOptions, httpOnly: true });
+  res.clearCookie("pkce_state", { ...baseCookieOptions, httpOnly: true });
 };
