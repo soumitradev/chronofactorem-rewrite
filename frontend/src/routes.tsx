@@ -26,8 +26,12 @@ export const rootRoute = rootRouteWithContext<{
   validateSearch: rootSearchSchema,
 });
 
-const ToastError = ({ error }: { error: Error }) => {
-  toastHandler(error);
+// toasts from an effect, since rendering runs more than once per error
+const RouteErrorToast = ({ error }: { error: Error }) => {
+  useEffect(() => {
+    toastHandler(error);
+  }, [error]);
+  return null;
 };
 
 const loginRoute = new Route({
@@ -45,7 +49,7 @@ const loginRoute = new Route({
           return;
         throw error;
       }),
-  errorComponent: ToastError,
+  errorComponent: RouteErrorToast,
 }).lazy(() => import("./pages/Login").then((d) => d.Route));
 
 // Users land here after every login, so registered users (the ones /api/user
@@ -70,7 +74,7 @@ const getDegreesRoute = new Route({
     }
     throw redirect({ to: "/" });
   },
-  errorComponent: ToastError,
+  errorComponent: RouteErrorToast,
 }).lazy(() => import("./pages/GetDegrees").then((d) => d.Route));
 
 const aboutRoute = new Route({
@@ -108,7 +112,7 @@ const homeRoute = new Route({
       throw error;
     }),
   pendingComponent: HomeSkeleton,
-  errorComponent: ToastError,
+  errorComponent: RouteErrorToast,
 }).lazy(() => import("./pages/Home").then((d) => d.Route));
 
 const editUserProfileRoute = new Route({
@@ -122,7 +126,7 @@ const editUserProfileRoute = new Route({
       throw error;
     }
   },
-  errorComponent: ToastError,
+  errorComponent: RouteErrorToast,
 }).lazy(() => import("./pages/EditUserProfile").then((d) => d.Route));
 
 const timetablePageLoader = async ({
