@@ -7,12 +7,11 @@ import {
 } from "@/components/ui/tooltip";
 import { hueStyle } from "@/lib/courseHues";
 import { formatAxisHour } from "@/lib/formatTime";
-import { titleCase as nameCase } from "@/lib/titleCase";
+import { titleCase } from "@/lib/titleCase";
 import {
   blockName,
   type TimetableCell,
   timetableDayNames,
-  titleCase,
 } from "@/utils/timetableGrid";
 import { EmptyState, emptyTimetableHint } from "./EmptyState";
 
@@ -114,7 +113,7 @@ const RowBlockLines = ({
           className={`block overflow-hidden leading-[1.16] font-medium tracking-[-0.015em] break-words ${sizes.rowNameClamp} ${sizes.name}`}
         >
           {remove && <RemoveSpacer />}
-          {nameCase(cell.name)}
+          {titleCase(cell.name)}
         </span>
         <span
           className={`mt-0.5 block font-mono font-medium text-ink-muted ${sizes.section}`}
@@ -187,7 +186,7 @@ const ColumnBlockLines = ({
                 }
               />
             )}
-            {nameCase(cell.name)}
+            {titleCase(cell.name)}
           </span>
           {tallColumn && (
             <span

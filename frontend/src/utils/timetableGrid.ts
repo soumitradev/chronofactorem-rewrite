@@ -130,17 +130,6 @@ export function blockName(cell: TimetableCell): string {
   );
 }
 
-export function titleCase(name: string): string {
-  return name
-    .split(" ")
-    .map((word) =>
-      /^[IVX]+$/i.test(word)
-        ? word.toUpperCase()
-        : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
-    )
-    .join(" ");
-}
-
 export function buildTimingsPreview(timings: readonly string[]) {
   // store the course code per slot so callers can tint each cell
   const filled = new Map<string, string>();
