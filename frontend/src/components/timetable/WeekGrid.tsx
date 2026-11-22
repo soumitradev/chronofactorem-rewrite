@@ -32,12 +32,8 @@ const tileClass =
 const padClass =
   "flex size-full flex-col justify-between px-[6px] py-[4px] sm:pt-1.5 sm:pb-[5px] text-left leading-[1.12]";
 
-/**
- * A grid tile's text. `spacer` floats a box of that size at the top right of
- * the first line so a word that would run under the editor's × wraps below it.
- * `reserve` instead pads the stacked layout's dept line clear of the × and
- * truncates it, so a narrow tile never grows a line.
- */
+// `spacer` floats a box at the first line's top right so a word wraps below the ×;
+// `reserve` instead pads and truncates the stacked dept line so a narrow tile never grows
 export function TileBody({
   cell,
   spacer,
@@ -142,9 +138,8 @@ export function WeekGrid({
             >
               <TileBody cell={cell} spacer="h-3 w-3" reserve="pr-2.5" />
             </OpenButton>
-            {/* the tile is small, so the ×'s hit area stays at 28px rather
-            than taking most of it */}
             <RemoveButton
+              // the tile is small, so keep the ×'s hit area at 28px instead of most of the tile
               cell={cell}
               disabled={pending || leaving}
               onRemove={onRemove}

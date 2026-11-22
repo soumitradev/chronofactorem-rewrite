@@ -67,6 +67,7 @@ const TEXT_SIZES = {
     rowNameClamp: "max-h-[3.6em] min-[1920px]:max-h-none",
     colGap: "gap-1 min-[1920px]:gap-2",
   },
+  // the export frame is 1440px wide offscreen, so viewport breakpoints must not size it
   fixed: {
     name: "text-[15px]",
     singleName: "line-clamp-2 text-[14.5px]",
@@ -364,10 +365,10 @@ export function DeskGrid({
           {formatAxisHour(h)}
         </div>
       ))}
-      {/* one line above each day row (or hour row), centred in the gap and
-      drawn before the blocks so they cover it */}
       {(rows ? days : hours).map((_, i) => (
         <div
+          // one line above each day (or hour) row, centred in the gap and drawn
+          // before the blocks so they cover it
           key={`line-${i}`}
           aria-hidden="true"
           className="pointer-events-none -translate-y-[2.5px] self-start border-gridline border-t"

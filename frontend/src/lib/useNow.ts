@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 
-/**
- * The current time, refreshed on every minute boundary. `null` while disabled.
- * Re-syncs when the tab becomes visible again, so a laptop waking up (or a
- * date rollover while hidden) is caught straight away.
- */
+// re-sync when the tab becomes visible again so a laptop waking up (or a date
+// rollover while hidden) is caught straight away
 export function useNow(enabled: boolean): Date | null {
   const [now, setNow] = useState<Date | null>(null);
 

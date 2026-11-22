@@ -18,7 +18,7 @@ type AgendaProps = {
   day: number;
   mode: SurfaceMode;
   pending?: boolean;
-  /** Today's grid hour and the formatted time; set only when it is on this day. */
+  // set only when now falls on this day
   now?: { hour: number; fraction: number; label: string } | null;
   onOpen?: (
     cell: TimetableCell,
@@ -136,7 +136,7 @@ export function Agenda({
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [day]);
   // the item the now-line follows: the free gap or the class holding this
-  // hour. before the first class or after the last, there is none.
+  // hour. before the first class or after the last, there is none
   const nowIndex = now
     ? items.findIndex((item) =>
         item.kind === "free"

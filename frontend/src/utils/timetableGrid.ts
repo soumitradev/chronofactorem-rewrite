@@ -26,7 +26,7 @@ export type TimetableCell = Omit<TimetableSectionType, "roomTime"> & {
   hour: number;
   span: number;
   hue?: number;
-  /** Set by the surface while a section animates in or out. */
+  // set by the surface while a section animates in or out
   presence?: "present" | "entering" | "leaving";
 };
 

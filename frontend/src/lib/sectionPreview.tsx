@@ -10,7 +10,6 @@ const noPreview: SectionPreview = { preview: null, setPreview: () => {} };
 
 const SectionPreviewContext = createContext<SectionPreview>(noPreview);
 
-/** Holds the section hovered in the picker, so the grid can ghost it. */
 export function SectionPreviewProvider({
   children,
 }: {
@@ -29,10 +28,7 @@ export function useSectionPreview(): SectionPreview {
   return useContext(SectionPreviewContext);
 }
 
-/**
- * Keeps the last non-null `value` for `ms` after it turns null, so whatever
- * shows it can fade out instead of vanishing.
- */
+// keep the last non-null value for `ms` after it turns null so it can fade out
 export function useFadingValue<T>(
   value: T | null,
   ms: number,

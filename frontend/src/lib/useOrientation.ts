@@ -4,10 +4,7 @@ import type { Orientation } from "@/components/timetable/TimetableSurface";
 import { TimetableActionType, useTimetableState } from "@/context";
 import { startSurfaceTransition } from "./viewTransitions";
 
-/**
- * The desktop grid's orientation. Toggling morphs every block from its old
- * place to its new one.
- */
+// toggling morphs every block from its old place to its new one
 export function useOrientation(): {
   orientation: Orientation;
   toggle(): void;

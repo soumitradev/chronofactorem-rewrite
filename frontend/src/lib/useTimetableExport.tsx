@@ -18,14 +18,8 @@ const NOT_PREPARED =
 
 let styleProperties: string[] | undefined;
 
-/**
- * html-to-image copies every computed property (~530) onto every cloned node,
- * which blocks the main thread for half a second. Only properties some rule or
- * inline style declares can differ from what the clone gets by default, so
- * copying just those draws the same image. Custom properties are already
- * resolved into the computed values, and a still image has no animations or
- * transitions. Read once: html-to-image caches the list it is given anyway.
- */
+// html-to-image copies all ~530 computed properties onto every clone, blocking the main thread
+// for half a second; only declared properties can differ from the clone's defaults, so copy those
 function declaredStyleProperties(node: HTMLElement): string[] {
   if (styleProperties) return styleProperties;
   const declared = new Set<string>();
@@ -51,6 +45,7 @@ function declaredStyleProperties(node: HTMLElement): string[] {
   styleProperties = Array.from(
     getComputedStyle(document.documentElement),
   ).filter(
+    // custom properties are already resolved, and a still image doesn't animate
     (name) => declared.has(name) && !/^(--|animation-|transition-)/.test(name),
   );
   return styleProperties;
@@ -146,11 +141,8 @@ function ExamList({
   );
 }
 
-/**
- * Exports the timetable as a 2880px wide PNG. The image is drawn from its own
- * offscreen desktop-width frame, so it never depends on the live page's
- * viewport, view, now-line or hover state.
- */
+// draw the 2880px-wide PNG from its own offscreen desktop-width frame so it never
+// depends on the live page's viewport, view, now-line or hover state
 export function useTimetableExport(): {
   status: ExportStatus;
   exportPng(): Promise<void>;

@@ -79,7 +79,7 @@ const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
-/** e.g. `Oct 31, 2026, 4:36 PM`. */
+// e.g. `Oct 31, 2026, 4:36 PM`
 export const formatTimestamp = (d: Date): string => absoluteFormat.format(d);
 
 export function formatRelative(d: Date, now: Date): string {
