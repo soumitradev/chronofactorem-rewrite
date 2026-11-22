@@ -13,16 +13,11 @@ export const namedSectionTypeZodEnum = (name?: string) =>
   });
 export const sectionTypeZodEnum = namedSectionTypeZodEnum();
 
-export const namedSectionTypeZodList = (name?: string) =>
-  namedSectionTypeZodEnum(name).array();
-export const sectionTypeZodList = namedSectionTypeZodList();
-
 export type sectionTypeEnum = z.infer<typeof sectionTypeZodEnum>;
-
-export type sectionTypeList = z.infer<typeof sectionTypeZodList>;
+export type sectionTypeList = sectionTypeEnum[];
 
 export const isAValidSectionType = (
-  degree: string,
-): degree is sectionTypeEnum => {
-  return approvedSectionTypeList.includes(degree as sectionTypeEnum);
+  sectionType: string,
+): sectionType is sectionTypeEnum => {
+  return approvedSectionTypeList.includes(sectionType as sectionTypeEnum);
 };
