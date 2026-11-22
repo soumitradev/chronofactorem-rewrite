@@ -38,7 +38,7 @@ export const loadSectionWithCourse = async (
   return section;
 };
 
-// Sends a 500 and returns false when the warnings say the section was never added
+// Sends a 500 and returns null when the warnings say the section was never added
 export const applyRemoveSection = (
   req: Request,
   res: Response,
@@ -48,7 +48,8 @@ export const applyRemoveSection = (
   const sameCourseSections = timetable.sections.filter(
     (currentSection) => currentSection.courseId === section.courseId,
   );
-  if (sameCourseSections.length === 1) {
+  const isLastCourseSection = sameCourseSections.length === 1;
+  if (isLastCourseSection) {
     timetable.examTimes = removeCourseExamTimes(
       timetable.examTimes,
       course.code,
@@ -73,9 +74,9 @@ export const applyRemoveSection = (
       message:
         "Timetable and warnings state inconsistent, please contact us if you see this",
     });
-    return false;
+    return null;
   }
-  return true;
+  return { writeExamTimes: isLastCourseSection };
 };
 
 // Sends a 400 and returns null when the section clashes with the timetable

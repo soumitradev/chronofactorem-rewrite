@@ -76,9 +76,12 @@ export const swapSections = async (req: Request, res: Response) => {
 
   // apply the swap in memory first so the clash checks see the timetable
   // without the old section
-  if (
-    !applyRemoveSection(req, res, context, { course, section, sectionTypes })
-  ) {
+  const removed = applyRemoveSection(req, res, context, {
+    course,
+    section,
+    sectionTypes,
+  });
+  if (!removed) {
     return;
   }
   const added = applyAddSection(res, timetable, {
@@ -93,7 +96,7 @@ export const swapSections = async (req: Request, res: Response) => {
   await persistTimetableSectionDelta(timetable, {
     removed: [section],
     added: [newSection],
-    writeExamTimes: added.writeExamTimes,
+    writeExamTimes: removed.writeExamTimes || added.writeExamTimes,
   });
   return res.json({ message: "section swapped" });
 };
