@@ -1,7 +1,6 @@
 import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import {
-  type degreeList,
   emailType,
   getBatchFromEmail,
   isAValidDegreeCombination,
@@ -15,20 +14,15 @@ import { User } from "../../entity/entities.js";
 import { userRepository } from "../../repositories/index.js";
 import timetableJSON from "../../timetable.json" with { type: "json" };
 import {
-  type FinishedUserSession,
-  type SignUpUserData,
-  type UnfinishedUserSession,
   ZodFinishedUserSession,
   ZodUnfinishedUserSession,
 } from "../../types/auth.js";
 import {
   clearAuthCookies,
   clearPkceCookies,
-  hashFingerprint,
+  issueSession,
   readSession,
-  setAuthCookies,
   setPkceCookies,
-  signJWT,
   toTitleCase,
 } from "../../utils/authUtils.js";
 
@@ -158,80 +152,69 @@ async function startSession(
   email: string,
   maxAge: number,
 ) {
-  const fingerprint = Math.random().toString(36).substring(2);
-
-  const userData: UnfinishedUserSession = {
-    name: name,
-    email: email,
-    maxAge: maxAge,
-    fingerprintHash: hashFingerprint(fingerprint),
-  };
-
   const existingUser = await userRepository
     .createQueryBuilder()
     .select()
     .where("email = :email", {
-      email: userData.email,
+      email,
     })
     .getOne();
 
   if (existingUser) {
-    const finishedUserData: FinishedUserSession = {
-      name: existingUser.name,
-      email: existingUser.email,
-      id: existingUser.id,
-      fingerprintHash: hashFingerprint(fingerprint),
-    };
-
-    // reset session and set ID as well
-    const token = signJWT(finishedUserData, maxAge);
-    clearAuthCookies(res);
-    setAuthCookies(res, token, fingerprint, maxAge);
-    res.redirect(env.FRONTEND_URL);
-  } else {
-    const batch = getBatchFromEmail(userData.email);
-
-    if (batch === "0000") {
-      const name = toTitleCase(userData.name);
-      // hd students and other non-f addresses have no batch or degree
-      // defaults to ask for on getDegrees, so they skip it entirely and
-      // get sentinel values instead
-      const createdUser = await userRepository
-        .createQueryBuilder()
-        .insert()
-        .into(User)
-        .values({
-          batch: 0,
-          name,
-          degrees: [unknownDegree],
-          email: userData.email,
-          timetables: [],
-        })
-        .execute();
-
-      const finishedUserData: FinishedUserSession = {
-        name,
-        email: userData.email,
-        id: createdUser.identifiers[0].id,
-        fingerprintHash: hashFingerprint(fingerprint),
-      };
-
-      const token = signJWT(finishedUserData, maxAge);
-      clearAuthCookies(res);
-      setAuthCookies(res, token, fingerprint, maxAge);
-      return res.redirect(env.FRONTEND_URL);
-    }
-
-    // reset session and set ID as well
-    const token = signJWT(userData, maxAge);
-    clearAuthCookies(res);
-    setAuthCookies(res, token, fingerprint, maxAge);
-
-    const yearOfStudy =
-      timetableJSON.metadata.acadYear - Number.parseInt(batch, 10) + 1;
-
-    res.redirect(`${env.FRONTEND_URL}/getDegrees?year=${yearOfStudy}`);
+    issueSession(
+      res,
+      {
+        name: existingUser.name,
+        email: existingUser.email,
+        id: existingUser.id,
+      },
+      maxAge,
+    );
+    return res.redirect(env.FRONTEND_URL);
   }
+
+  const batch = getBatchFromEmail(email);
+  if (batch === "0000") {
+    // hd students and other non-f addresses have no batch or degree
+    // defaults to ask for on getDegrees, so they skip it entirely and
+    // get sentinel values instead
+    await createUserAndSession(
+      res,
+      { name, email, degrees: [unknownDegree] },
+      maxAge,
+    );
+    return res.redirect(env.FRONTEND_URL);
+  }
+
+  issueSession(res, { name, email, maxAge }, maxAge);
+  const yearOfStudy =
+    timetableJSON.metadata.acadYear - Number.parseInt(batch, 10) + 1;
+  res.redirect(`${env.FRONTEND_URL}/getDegrees?year=${yearOfStudy}`);
+}
+
+async function createUserAndSession(
+  res: Response,
+  user: Pick<User, "name" | "email" | "degrees">,
+  maxAge: number,
+) {
+  const name = toTitleCase(user.name);
+  const createdUser = await userRepository
+    .createQueryBuilder()
+    .insert()
+    .into(User)
+    .values({
+      batch: Number.parseInt(getBatchFromEmail(user.email), 10),
+      name,
+      degrees: user.degrees,
+      email: user.email,
+      timetables: [],
+    })
+    .execute();
+  issueSession(
+    res,
+    { name, email: user.email, id: createdUser.identifiers[0].id },
+    maxAge,
+  );
 }
 
 export const isLoginAsEnabled = (): boolean =>
@@ -318,24 +301,8 @@ export async function getDegrees(req: Request, res: Response) {
       });
     }
 
-    const degrees: degreeList = req.body.degrees;
-
-    const userData: SignUpUserData = {
-      name: session.name,
-      email: session.email,
-      degrees: degrees,
-    };
-
-    // slices mail to obtain batch
-    const batch = getBatchFromEmail(userData.email);
-
-    // converts name to title case
-    const name = toTitleCase(userData.name);
-
-    // checks if user exists by email
-    const email = userData.email;
     const user = await userRepository.findOne({
-      where: { email },
+      where: { email: session.email },
     });
 
     if (user) {
@@ -344,32 +311,11 @@ export async function getDegrees(req: Request, res: Response) {
       });
     }
 
-    const createdUser = await userRepository
-      .createQueryBuilder()
-      .insert()
-      .into(User)
-      .values({
-        batch: Number.parseInt(batch, 10),
-        name: name,
-        degrees: userData.degrees,
-        email: userData.email,
-        timetables: [],
-      })
-      .execute();
-
-    const fingerprint = Math.random().toString(36).substring(2);
-    const finishedUserData: FinishedUserSession = {
-      name: session.name,
-      email: session.email,
-      id: createdUser.identifiers[0].id,
-      fingerprintHash: hashFingerprint(fingerprint),
-    };
-
-    const token = signJWT(finishedUserData, session.maxAge);
-    clearAuthCookies(res);
-    setAuthCookies(res, token, fingerprint, session.maxAge);
-
-    // reset session and set ID as well
+    await createUserAndSession(
+      res,
+      { name: session.name, email: session.email, degrees: req.body.degrees },
+      session.maxAge,
+    );
     res.json({
       success: true,
     });
