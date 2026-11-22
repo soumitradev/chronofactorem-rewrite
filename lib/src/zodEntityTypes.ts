@@ -41,20 +41,6 @@ export const namedCourseType = (name?: string) =>
     createdAt: namedISOTimestampType(addNameToString("course createdAt", name)),
   });
 
-export const namedSearchHistoryType = (name?: string) =>
-  z.strictObject({
-    id: namedUUIDType(addNameToString("search history", name)),
-    userEmailHash: namedNonEmptyStringType(
-      addNameToString("search history user email hash", name),
-    ),
-    searchTerm: namedNonEmptyStringType(
-      addNameToString("search history search term", name),
-    ),
-    searchedAt: namedISOTimestampType(
-      addNameToString("search history searchedAt", name),
-    ),
-  });
-
 export const namedSectionType = (name?: string) =>
   z.strictObject({
     id: namedUUIDType(addNameToString("section", name)),
@@ -113,31 +99,6 @@ export const namedUserType = (name?: string) =>
     createdAt: namedISOTimestampType(addNameToString("user createdAt", name)),
   });
 
-export const namedSectionWithCourseType = (name?: string) =>
-  z
-    .object({
-      course: namedCourseType(addNameToString("section course", name)),
-    })
-    .extend(namedSectionType(name).shape);
-
-export const namedSectionWithTimetablesType = (name?: string) =>
-  z
-    .object({
-      timetables: namedTimetableType(
-        addNameToString("section timetables", name),
-      ).array(),
-    })
-    .extend(namedSectionType(name).shape);
-
-export const namedSectionWithCourseAndTimetablesType = (name?: string) =>
-  z
-    .object({
-      timetables: namedTimetableType(
-        addNameToString("section timetables", name),
-      ).array(),
-    })
-    .extend(namedSectionWithCourseType(name).shape);
-
 export const namedTimetableWithSectionsType = (name?: string) =>
   z
     .object({
@@ -179,31 +140,17 @@ export const namedAnnouncementType = (name?: string) =>
   });
 
 export const namedAnnouncementWithIDType = (name?: string) =>
-  z.strictObject({
+  namedAnnouncementType(name).extend({
     id: namedUUIDType(addNameToString("announcement id", name)),
-    title: namedNonEmptyStringType(addNameToString("announcement title", name)),
-    message: namedNonEmptyStringType(
-      addNameToString("announcement message", name),
-    ),
-    createdAt: namedISOTimestampType(
-      addNameToString("announcement createdAt", name),
-    ).optional(),
   });
 
 export const announcementWithIDType = namedAnnouncementWithIDType();
 export const announcementType = namedAnnouncementType();
-export const userType = namedUserType();
 export const timetableType = namedTimetableType();
 export const sectionType = namedSectionType();
 export const courseType = namedCourseType();
-export const searchHistoryType = namedSearchHistoryType();
 
 export const courseWithSectionsType = namedCourseWithSectionsType();
-
-export const sectionWithCourseType = namedSectionWithCourseType();
-export const sectionWithTimetablesType = namedSectionWithTimetablesType();
-export const sectionWithCourseAndTimetablesType =
-  namedSectionWithCourseAndTimetablesType();
 
 export const timetableWithSectionsType = namedTimetableWithSectionsType();
 
