@@ -9,10 +9,7 @@ export function useNow(enabled: boolean): Date | null {
   const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
-    if (!enabled) {
-      setNow(null);
-      return;
-    }
+    if (!enabled) return;
     let timer: ReturnType<typeof setTimeout>;
     const tick = () => {
       clearTimeout(timer);
