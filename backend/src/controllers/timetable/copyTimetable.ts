@@ -33,20 +33,24 @@ export const copyTimetable = async (req: Request, res: Response) => {
       .json({ message: "timetable is archived. cannot copy old timetables" });
   }
 
-  const timetable = await timetableRepository.insert(
-    newTimetableValues(author, copiedTimetable),
-  );
-
-  for (const section of copiedTimetable.sections) {
-    await timetableRepository
-      .createQueryBuilder()
-      .relation(Timetable, "sections")
-      .of(timetable.identifiers[0].id)
-      .add(section);
-  }
+  const id = await timetableRepository.manager.transaction(async (manager) => {
+    const inserted = await manager.insert(
+      Timetable,
+      newTimetableValues(author, copiedTimetable),
+    );
+    const insertedId: number = inserted.identifiers[0].id;
+    if (copiedTimetable.sections.length > 0) {
+      await manager
+        .createQueryBuilder()
+        .relation(Timetable, "sections")
+        .of(insertedId)
+        .add(copiedTimetable.sections);
+    }
+    return insertedId;
+  });
 
   return res.status(201).json({
     message: "Timetable copied successfully",
-    id: sqids.encode([timetable.identifiers[0].id]),
+    id: sqids.encode([id]),
   });
 };
