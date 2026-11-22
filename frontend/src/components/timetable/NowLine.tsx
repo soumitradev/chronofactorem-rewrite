@@ -3,7 +3,6 @@ import type { NowPosition } from "@/utils/timetableGrid";
 
 const dot = "now-dot pointer-events-none absolute size-2.5 rounded-full bg-now";
 
-/** The now-line in a free gap, or in the break after a class. */
 function AgendaLine({ label }: { label: string }) {
   return (
     <div className="mb-2.5 grid grid-cols-[64px_1fr] items-center gap-3">
@@ -19,15 +18,9 @@ function AgendaLine({ label }: { label: string }) {
   );
 }
 
-/**
- * The now-line for the class that is on: at the share of the class gone by,
- * a short rule from the right edge of the time column to the block's left
- * edge, where the dot sits. It never crosses the block. Laid over the agenda row's
- * two-column grid.
- */
+// laid over the row's grid so the rule stops at the block's edge instead of crossing it
 function ThroughLine({ label, at }: { label: string; at: number }) {
-  // the row clips its content (it collapses on removal), so keep the dot
-  // inside it at the very start and end of the class
+  // the row clips its content as it collapses, so keep the dot inside it at the class's start and end
   const top = `clamp(10px, ${at * 100}%, 100% - 10px)`;
   return (
     <div className="pointer-events-none absolute inset-0 grid grid-cols-[64px_1fr] gap-3">
@@ -47,14 +40,10 @@ function ThroughLine({ label, at }: { label: string; at: number }) {
 
 type GridProps = {
   pos: NowPosition;
-  /** x: desktop rows (time runs across). y: phone week and desktop columns. */
   axis: "x" | "y";
-  /** where today's cell for pos.hour sits in the grid */
   cell: CSSProperties;
 };
 
-// the line is drawn only across today's column (or row), from a dot at its
-// start
 function GridLine({ pos, axis, cell }: GridProps) {
   const x = axis === "x";
   const f = { "--f": pos.fraction, containerType: "size" } as CSSProperties;

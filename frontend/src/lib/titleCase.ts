@@ -1,6 +1,6 @@
 const ROMAN = /^(?=[IVX])X{0,3}(IX|IV|V?I{0,3})$/i;
 
-// Words that stay upper-case when a shouty catalog name is title-cased.
+// words that stay upper-case when a shouty catalog name is title-cased
 const ACRONYMS = new Set([
   "AI",
   "DNA",
@@ -32,7 +32,7 @@ const ACRONYMS = new Set([
 ]);
 
 export function titleCase(s: string): string {
-  // Already mixed-case names were typed by a person; leave them alone.
+  // mixed-case names were typed by a person, so leave them alone
   if (/[a-z]/.test(s)) return s;
   return s
     .split(/([\s\-/(),]+)/)

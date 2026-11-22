@@ -54,14 +54,12 @@ export function TimetableSurface({
   onRemove,
   onShowDay,
 }: SurfaceProps) {
-  // only the desktop editor ghosts the hovered picker section; it lingers
-  // for --d-1 (120ms) after the hover ends so it can fade out
+  // the ghost lingers for --d-1 (120ms) after the hover ends so it can fade out
   const ghost = useFadingValue(
     layout === "desktop" && mode === "edit" ? (preview ?? null) : null,
     120,
   );
-  // sections that were just removed stay (leaving) until they finish collapsing,
-  // and still count towards the layout; the export never animates
+  // removed sections stay as leaving until they finish collapsing and still count towards the layout
   const presence = useSectionPresence(sections, {
     disabled: mode === "export",
   });
@@ -121,7 +119,6 @@ export function TimetableSurface({
     return buildTimetableGrid([ghost.value]).cells.map((c) => ({ ...c, hue }));
   }, [ghost.value, courseHues, colorSeed]);
 
-  // the now-line belongs to the live view page only, never the editor or export
   const date = useNow(mode === "view" && !!showNow);
   const pos = date ? nowPosition(date, dayCount, hourCount) : null;
   const swipe = useSwipe(day, dayCount, onShowDay);

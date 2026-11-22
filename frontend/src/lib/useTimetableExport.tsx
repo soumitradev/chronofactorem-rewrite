@@ -18,14 +18,7 @@ const NOT_PREPARED =
 
 let styleProperties: string[] | undefined;
 
-/**
- * html-to-image copies every computed property (~530) onto every cloned node,
- * which blocks the main thread for half a second. Only properties some rule or
- * inline style declares can differ from what the clone gets by default, so
- * copying just those draws the same image. Custom properties are already
- * resolved into the computed values, and a still image has no animations or
- * transitions. Read once: html-to-image caches the list it is given anyway.
- */
+// html-to-image copies all ~530 computed props per clone (~0.5s main-thread block), but only declared ones can differ
 function declaredStyleProperties(node: HTMLElement): string[] {
   if (styleProperties) return styleProperties;
   const declared = new Set<string>();
@@ -51,6 +44,7 @@ function declaredStyleProperties(node: HTMLElement): string[] {
   styleProperties = Array.from(
     getComputedStyle(document.documentElement),
   ).filter(
+    // custom properties are already resolved, and a still image doesn't animate
     (name) => declared.has(name) && !/^(--|animation-|transition-)/.test(name),
   );
   return styleProperties;
@@ -146,11 +140,7 @@ function ExamList({
   );
 }
 
-/**
- * Exports the timetable as a 2880px wide PNG. The image is drawn from its own
- * offscreen desktop-width frame, so it never depends on the live page's
- * viewport, view, now-line or hover state.
- */
+// render from an offscreen 1440px frame so the PNG ignores the live viewport, view, now-line and hover
 export function useTimetableExport(): {
   status: ExportStatus;
   exportPng(): Promise<void>;
@@ -178,9 +168,7 @@ export function useTimetableExport(): {
     clearTimeout(doneTimer.current);
     setStatus("rendering");
     try {
-      // loaded on first export, since most visits never export
       const htmlToImage = import("html-to-image");
-      // wait for the offscreen frame to mount and lay out
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
       );
@@ -202,10 +190,8 @@ export function useTimetableExport(): {
       link.href = url;
       link.click();
       haptic("success");
-      // Safari and Firefox read the blob after click() returns; revoking on the
-      // next tick can cancel the download, so give it time (as FileSaver does)
+      // Safari and Firefox read the blob after click() returns, so delay the revoke (as FileSaver does)
       setTimeout(() => URL.revokeObjectURL(url), 40_000);
-      // the "done" window is feedback only; a new export may start in it
       busy.current = false;
       setStatus("done");
       doneTimer.current = setTimeout(() => {

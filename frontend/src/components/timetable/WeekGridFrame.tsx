@@ -1,8 +1,7 @@
 import { formatAxisHour } from "@/lib/formatTime";
 import { timetableDayNames } from "@/utils/timetableGrid";
 
-// the phone week grid's tracks, axis labels and hour lines; the loading
-// skeleton draws the same frame so nothing moves when the page arrives
+// the loading skeleton draws this same frame so nothing moves when the page arrives
 export function WeekGridFrame({
   dayCount,
   hourCount,
@@ -14,7 +13,6 @@ export function WeekGridFrame({
 }) {
   return (
     <div
-      // bump row height from 50px to 64px on tablets because wider tiles fit larger text
       className="relative grid gap-x-[3px] gap-y-[5px] sm:gap-y-1.5 px-2.5 py-1 [--tt-row:50px] sm:[--tt-row:64px]"
       style={{
         gridTemplateColumns: `40px repeat(${dayCount}, minmax(0, 1fr))`,

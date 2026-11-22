@@ -26,7 +26,7 @@ export type TimetableCell = Omit<TimetableSectionType, "roomTime"> & {
   hour: number;
   span: number;
   hue?: number;
-  /** Set by the surface while a section animates in or out. */
+  // set by the surface while a section animates in or out
   presence?: "present" | "entering" | "leaving";
 };
 
@@ -134,7 +134,6 @@ export function splitCode(code: string): { dept: string; number: string } {
 const blockName = (cell: TimetableCell): string =>
   `tt-${cell.id}-${cell.day}-${cell.hour}`.replace(/[^a-zA-Z0-9_-]/g, "_");
 
-// live blocks carry their morph name; export and leaving blocks don't
 export function blockProps(cell: TimetableCell, mode: SurfaceMode) {
   const named = mode !== "export" && cell.presence !== "leaving";
   return {
@@ -147,7 +146,6 @@ export function blockProps(cell: TimetableCell, mode: SurfaceMode) {
 }
 
 export function buildTimingsPreview(timings: readonly string[]) {
-  // store the course code per slot so callers can tint each cell
   const filled = new Map<string, string>();
   let dayCount = MIN_DAYS;
   let hourCount = MIN_HOURS;

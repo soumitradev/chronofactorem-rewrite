@@ -18,7 +18,6 @@ type AgendaProps = {
   day: number;
   mode: SurfaceMode;
   pending?: boolean;
-  /** Today's grid hour and the formatted time; set only when it is on this day. */
   now?: { hour: number; fraction: number; label: string } | null;
   onOpen?: (
     cell: TimetableCell,
@@ -76,7 +75,6 @@ function AgendaBlock({
     style: block.style,
   };
   return mode === "edit" ? (
-    // the open button and the × are siblings, never nested
     <div
       {...shared}
       className={`${blockClass} ${block.className} relative hover:bg-ev-hover`}
@@ -128,15 +126,13 @@ export function Agenda({
   useEffect(() => {
     seen.current = { day, keys: freeKeys };
   });
-  // a new day starts at the top, set before the swipe's new snapshot
+  // reset scroll before the swipe snapshots the new day so it starts at the top
   const shownDay = useRef(day);
   useLayoutEffect(() => {
     if (shownDay.current === day) return;
     shownDay.current = day;
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [day]);
-  // the item the now-line follows: the free gap or the class holding this
-  // hour. before the first class or after the last, there is none.
   const nowIndex = now
     ? items.findIndex((item) =>
         item.kind === "free"
@@ -160,8 +156,7 @@ export function Agenda({
     );
   }
 
-  // the 10 minutes after a class are its break, not part of it. during the
-  // class the now-line runs through its block at the share gone by (0–1)
+  // the 10 minutes after a class are its break, not part of it
   const elapsed = (cell: TimetableCell) =>
     now ? (now.hour + now.fraction - cell.hour) / (cell.span - 1 / 6) : -1;
   const isDuring = (cell: TimetableCell) => {

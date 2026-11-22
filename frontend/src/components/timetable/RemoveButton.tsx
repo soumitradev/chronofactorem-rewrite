@@ -2,8 +2,7 @@ import { X } from "lucide-react";
 import { HapticTap, haptic } from "@/lib/haptics";
 import type { TimetableCell } from "@/utils/timetableGrid";
 
-// a sibling of the block's open button, laid over its top-right corner (the
-// block must be `relative`); `className` places it and sizes its ::after hit area
+// sits over the block's top-right corner, so the block must be `relative`
 export function RemoveButton({
   cell,
   disabled,

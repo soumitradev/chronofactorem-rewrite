@@ -1,7 +1,6 @@
 import { Bird } from "lucide-react";
 import type { SurfaceMode } from "@/utils/timetableGrid";
 
-/** The bird with one line of hint text under it; the text is what is read out. */
 export function EmptyState({
   hint,
   className = "",

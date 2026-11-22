@@ -49,12 +49,7 @@ type CdcTimetable = Pick<
 >;
 
 export const cdcListFor = (timetable: CdcTimetable): string[] | undefined => {
-  // CDCs.json is keyed by degree combo: the timetable's degrees sorted,
-  // reversed, and joined (for example "B1A1"). Each combo maps
-  // "year-semester" to course codes, where "ECON/MGTS F211/F211" means
-  // either course counts.
-  // This only works because B-series duals are keyed by that concatenation.
-  // Reverse duals like "A3B4" and other degree codes (RMIT, other 2+2 programs) may not match.
+  // CDCs.json keys are the degrees sorted then reversed ("B1A1"); reverse duals like "A3B4" and 2+2 codes may not match
   const degree = (
     timetable.degrees.length === 1
       ? timetable.degrees[0]
@@ -78,6 +73,7 @@ export const formatCDCWarningsAndOptions = (
   if (cdcs === undefined) return [];
 
   for (let i = 0; i < cdcs.length; i++) {
+    // "ECON/MGTS F211/F211" means either course counts
     if (cdcs[i].includes("/")) {
       const [depts, codes] = cdcs[i].split(" ").map((part) => part.split("/"));
       const options = depts.map((dept, j) => `${dept} ${codes[j]}`);
@@ -89,8 +85,7 @@ export const formatCDCWarningsAndOptions = (
           warning: `One CDC of ${options.join(", ")} not found`,
         });
       } else {
-        // A partly found set still offers the options that exist; each
-        // missing option is reported on its own.
+        // a partly found set still offers the options that exist
         coursesList.push({
           id: null,
           type: "optional" as const,
@@ -129,10 +124,7 @@ type RemainingEntry =
   | { kind: "course"; course: Course }
   | { kind: "set"; key: string; options: Course[] };
 
-/**
- * CDCs not yet in the timetable, in CDC order. A set leaves as soon as any
- * of its options is added. Not-found warnings are never included.
- */
+// a set leaves as soon as any of its options is added; not-found warnings never show
 export const getRemainingCdcs = (
   cdcs: CDCType[],
   added: Course[],
@@ -156,7 +148,6 @@ export const getRemainingCdcs = (
   return remaining;
 };
 
-/** CDCs missing from the timetable. An unsatisfied set has no course id. */
 export const getMissingCdcs = (
   cdcs: CDCType[],
   added: Course[],
@@ -192,7 +183,6 @@ export const timetableMeta = (t: {
   return parts;
 };
 
-// Pre-fill data we know so that issues are more helpful and easier to file
 export const cdcIssueUrl = (
   t: CdcTimetable & { acadYear: number },
   notFound: string[],

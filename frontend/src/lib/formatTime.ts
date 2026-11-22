@@ -79,7 +79,6 @@ const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
-/** e.g. `Oct 31, 2026, 4:36 PM`. */
 export const formatTimestamp = (d: Date): string => absoluteFormat.format(d);
 
 export function formatRelative(d: Date, now: Date): string {
@@ -102,7 +101,6 @@ export function formatRelative(d: Date, now: Date): string {
 
 export const formatDayHeading = (d: Date): string => headingFormat.format(d);
 
-// e.g. `Mon, Wed, Fri · 9:00 AM – 9:50 AM · F102`
 export function summarizeRoomTimes(roomTime: string[]): string[] {
   const hoursByRoomDay = new Map<string, number[]>();
   for (const entry of roomTime) {

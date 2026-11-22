@@ -14,7 +14,6 @@ import { WeekGridFrame } from "./WeekGridFrame";
 
 const ref = skeletonRef("timetable");
 
-// a few week-grid tiles to suggest classes: [day, hour, span]
 const weekTiles = [
   [0, 1, 1],
   [2, 1, 1],
@@ -28,14 +27,7 @@ const weekTiles = [
   [4, 8, 1],
 ] as const;
 
-/**
- * The editor's and view page's loading state, shaped like their shells
- * (TimetablePageShell, TimetableHeader, TimetableDock) so nothing jumps when
- * the page arrives. It runs before the page's data and TimetableProvider
- * exist, so it reads nothing from the timetable. It carries none of the
- * shared view-transition names: those belong to the real page. The shell
- * crossfades from it when it arrives (useSkeletonCrossfade).
- */
+// runs before TimetableProvider exists, so leave the shared view-transition names to the real page
 export function TimetablePageSkeleton({
   page = "edit",
 }: {
@@ -43,14 +35,11 @@ export function TimetablePageSkeleton({
 }) {
   const isDesktop = useIsDesktop();
   const search = useSearch({ strict: false }) as TimetableSearch;
-  // The header's meta line holds the status chip on the view page, which is
-  // taller than the text line (TimetableStatusChip).
+  // the view page's meta line holds TimetableStatusChip, which is taller than a text line
   const metaHeight = page === "view" ? "h-[23.5px]" : "h-[1lh]";
 
   if (!isDesktop) {
-    // the dock's day and view as useSurfaceNav resolves them, so the pills
-    // and the switch don't move when the page arrives (Saturday can't be
-    // known before the data, so the pills are Mon-Fri)
+    // match useSurfaceNav's defaults so the dock doesn't move on arrival (Saturday needs the data, so Mon-Fri)
     const view =
       search.view ??
       (window.matchMedia("(max-width: 639px)").matches ? "day" : "week");
@@ -121,7 +110,6 @@ export function TimetablePageSkeleton({
                   </div>
                 ))}
               </div>
-              {/* the day/week Segmented (sm) at rest */}
               <div className="relative ml-1.5 grid h-8 w-[84px] shrink-0 grid-cols-2 rounded-md bg-sunk p-[3px]">
                 <span
                   className={`absolute top-[3px] bottom-[3px] left-[3px] w-[calc((100%-6px)/2)] rounded-[8px] bg-surface shadow-sm ${view === "week" ? "translate-x-full" : ""}`}
