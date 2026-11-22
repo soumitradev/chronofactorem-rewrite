@@ -2,11 +2,13 @@ import type * as React from "react";
 import { cn } from "@/lib/utils";
 
 export function Collapse({
+  id,
   open,
   children,
   onExited,
   appearOpen,
 }: {
+  id?: string;
   open: boolean;
   children: React.ReactNode;
   onExited?: () => void;
@@ -15,6 +17,7 @@ export function Collapse({
 }) {
   return (
     <div
+      id={id}
       className={cn(
         "grid transition-[grid-template-rows,opacity] duration-(--d-2) ease-(--e-out)",
         open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
