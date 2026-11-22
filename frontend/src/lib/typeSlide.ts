@@ -1,7 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { prefersReducedMotion } from "./viewTransitions";
 
-/** A section list on the track, `slot` list-widths from the first one. */
 export type Pane<T> = { type: T; slot: number };
 
 type Slide<T> = {
@@ -9,14 +8,11 @@ type Slide<T> = {
   type: T | null;
   slot: number;
   panes: Pane<T>[];
-  // which way the last switch moved, and a count so each switch animates once
   dir: 1 | -1 | 0;
   step: number;
-  // the type changed within the same course, so the new list starts at the top
   top: boolean;
 };
 
-// how far a list on the track is pinned up, from its `translate`
 const lift = (el: HTMLElement) =>
   Number.parseFloat(el.style.translate.split(" ")[1] ?? "") || 0;
 
@@ -26,11 +22,6 @@ const ms = (value: string, fallback: number) => {
   return Number.parseFloat(v) * (v.endsWith("ms") ? 1 : 1000);
 };
 
-/**
- * Slides section-type lists past each other on one moving track, from the
- * right when the new type is later in `order`. Panes go directly in
- * `trackRef`, the current one marked `data-current`.
- */
 export function useTypeSlide<T>(
   key: string | null,
   type: T | null,
@@ -58,7 +49,7 @@ export function useTypeSlide<T>(
     ) {
       const dir = order.indexOf(type) > order.indexOf(from) ? 1 : -1;
       const slot = slide.slot + dir;
-      // A list already on the track keeps its node; one in the way is dropped.
+      // keep the node of a list already on the track
       const panes = [
         ...slide.panes.filter((p) => p.type !== type && p.slot !== slot),
         { type, slot },
@@ -92,7 +83,7 @@ export function useTypeSlide<T>(
     const track = trackRef.current;
     const scroller = scrollRef.current;
     if (slide.top && track && scroller) {
-      // New list at the top; outgoing lists pinned so they don't move on screen
+      // pin outgoing lists so they don't jump when the new one scrolls to the top
       const panes = [...track.children] as HTMLElement[];
       const current = panes.find((p) => p.dataset.current !== undefined);
       const before = scroller.scrollTop;
@@ -120,7 +111,7 @@ export function useTypeSlide<T>(
       settle();
       return;
     }
-    // Start from wherever a cut-short slide left the track
+    // start from wherever a cut-short slide left the track
     const t = getComputedStyle(track).transform;
     const x = t === "none" ? 0 : new DOMMatrixReadOnly(t).m41;
     for (const a of track.getAnimations()) a.cancel();

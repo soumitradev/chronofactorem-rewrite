@@ -17,15 +17,12 @@ export function haptic(kind: HapticKind) {
   if (navigator.userActivation?.hasBeenActive === false) return;
   try {
     navigator.vibrate(patterns[kind]);
-  } catch {
-    // never let a buzz break the tap that asked for it
-  }
+  } catch {}
 }
 
 const switchTick = typeof navigator.vibrate !== "function" && coarse();
 
-// iOS has no vibrate, but Safari ticks when a real tap toggles a switch input,
-// even through its label. Put this last inside a `relative` button.
+// iOS has no vibrate, but Safari ticks when a tap toggles a switch, even via its label
 export function HapticTap({ className }: { className?: string }) {
   if (!switchTick) return null;
   return (

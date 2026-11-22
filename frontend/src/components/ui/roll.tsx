@@ -1,7 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-// swaps `value` with a vertical slide; the first render doesn't animate
 export function Roll({
   value,
   className,

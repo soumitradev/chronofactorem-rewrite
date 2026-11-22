@@ -20,8 +20,6 @@ interface TabsProps<T extends string> {
   panelClassName?: string
 }
 
-// Panels sit side by side on a scroll-snap track, so a sideways swipe switches
-// too. The value only changes once the track comes to rest.
 function Tabs<T extends string>({
   value,
   onValueChange,
@@ -73,12 +71,11 @@ function Tabs<T extends string>({
     const width = a.offsetWidth + (b.offsetWidth - a.offsetWidth) * t
     bar.style.width = `${width}px`
     bar.style.transform = `translateX(${left}px)`
-    // the label lights up as soon as its panel is the nearer one
     const near = restingIndex()
     tabRefs.current.forEach((tab, j) => tab?.toggleAttribute("data-current", j === near))
   }
 
-  // the value moved without the track (first render, history): jump to it
+  // value changed outside the track (first render, history), so jump there
   React.useLayoutEffect(() => {
     const track = trackRef.current
     if (track && restingIndex() !== index) {
@@ -127,7 +124,6 @@ function Tabs<T extends string>({
       if (tabs[i].value !== value) onValueChange(tabs[i].value)
       return
     }
-    // the value follows on scrollend
     track.scrollTo({ left, behavior: "smooth" })
   }
 

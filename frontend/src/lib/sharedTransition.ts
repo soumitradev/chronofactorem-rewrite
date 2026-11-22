@@ -1,11 +1,7 @@
 import type { ParsedLocation } from "@tanstack/react-router";
 
-// A view-transition name may appear only once per page, so only the card
-// at the other end of a home <-> timetable navigation gets these. They
-// resolve only during the transitions that morph them (index.css,
-// `shared-timetable` and the view-morph/orient types): named elements paint
-// above the page snapshot, so naming them in every transition would draw the
-// title and grid over the phone sheet or the copying dialog.
+// resolved only in the morphing transitions: named elements paint above the page,
+// so naming them always would draw over the phone sheet or the copying dialog
 export const TIMETABLE_TITLE_VT = "var(--vt-timetable-title)";
 export const TIMETABLE_GRID_VT = "var(--vt-timetable-grid)";
 
@@ -31,7 +27,7 @@ export const timetableId = (location: ParsedLocation | undefined) =>
   location?.pathname.match(/^\/(?:edit|view|finalize)\/([^/]+)\/?$/)?.[1] ??
   null;
 
-// Must run on onBeforeNavigate, before the old snapshot is taken.
+// must run on onBeforeNavigate, before the old snapshot is taken
 export function trackSharedTimetable(info: {
   fromLocation?: ParsedLocation;
   toLocation: ParsedLocation;

@@ -4,10 +4,6 @@ const MIN_DISTANCE = 48;
 // left to the browser's own edge swipes (back and forward)
 const EDGE = 24;
 
-/**
- * Touch swipes between `count` panes (days, section types): left for the
- * next, right for the previous. Vertical drags stay the page's scroll.
- */
 export function useSwipe(
   index: number,
   count: number,

@@ -27,7 +27,6 @@
   src: url("/fonts/dm-mono-500-latin.woff2") format("woff2");
 }
 
-/* Warm paper light palette and dark slate neutral chrome. */
 :root {
   color-scheme: light;
   --bg: #f6f4ef;
@@ -48,19 +47,15 @@
   --scrim: rgba(16, 20, 28, 0.34);
   --shadow:
     0 1px 2px rgba(20, 22, 26, 0.05), 0 12px 28px -12px rgba(20, 22, 26, 0.12);
-  /* text on --danger */
   --danger-ink: #ffffff;
 
-  /* motion */
   --d-1: 120ms;
   --d-2: 200ms;
   --d-3: 300ms;
-  /* Whole-screen motion, such as the theme reveal */
   --d-4: 480ms;
   --e-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --e-in: cubic-bezier(0.3, 0, 1, 1);
   --e-in-out: cubic-bezier(0.4, 0, 0.2, 1);
-  /* One small overshoot (~6%) settling within --d-3 */
   --e-spring: linear(
     0,
     0.2 6%,
@@ -235,9 +230,7 @@
   }
 }
 
-/* the crux mark behind mostly empty pages (CruxMark). the tint is an opaque
-   colour rather than a translucent accent, so text over it has a known
-   contrast: muted text stays above AA in both themes */
+/* an opaque tint rather than a translucent accent, so muted text over it stays AA */
 .crux-mark {
   position: fixed;
   inset: 0;
@@ -249,7 +242,6 @@
 
   & svg {
     --s: clamp(420px, 115vmin, 960px);
-    /* pushed past the corner so about 60% of the mark shows */
     position: absolute;
     width: var(--s);
     height: var(--s);
@@ -279,12 +271,8 @@
     }
   }
 
-  /* the navbar holds still while the page slides under it, and only
-  crossfades what changed (the active link, the create button). only while
-  it sits at the top of both pages (data-navbar-still, lib/viewTransitions.ts),
-  since a scrolled page would make it jump. an open dialog's scrim covers it,
-  and a named navbar would paint above the scrim, so it slides with the page
-  then */
+  /* named only when both pages are at the top (or it jumps) and no dialog is open (or it
+  paints over the scrim) */
   html[data-navbar-still]:active-view-transition-type(forward, back):not(
     :has([role="dialog"], [role="alertdialog"])
   ) .app-navbar {
@@ -298,15 +286,8 @@
     animation-duration: var(--d-3);
   }
 
-  /* the crux mark (CruxMark) holds still like the navbar, so the page slides
-  under it, and it fades on its own when only one of the pages has it.
-  a named group always paints over the root, so the mark would cover the
-  sliding text. it can't go under the root instead: the root snapshot
-  carries the page background, and making that transparent shows the
-  browser's own white. so it blends in. on every channel the tint is darker
-  than the background in light and lighter in dark, so darken (light) and
-  lighten (dark) give exactly the tint over the background and let the ink,
-  which is further from the background than the tint, through unchanged */
+  /* the named mark paints over the sliding text and can't sit under root (which carries the
+  bg), so it blends: the tint is darker than the bg in light and lighter in dark */
   html:active-view-transition-type(forward, back) .crux-mark {
     view-transition-name: crux-mark;
   }
@@ -322,7 +303,6 @@
     animation-duration: var(--d-3);
   }
 
-  /* render toasts above everything */
   html:active-view-transition .toast-viewport {
     view-transition-name: app-toasts;
   }
@@ -337,7 +317,6 @@
     animation: none;
   }
 
-  /* Home card <-> timetable page shared element (lib/sharedTransition.ts) */
   html:active-view-transition-type(shared-timetable) {
     --vt-timetable-title: timetable-title;
     --vt-timetable-grid: timetable-grid;
@@ -355,8 +334,6 @@
   }
 }
 
-/* Theme change: the new snapshot grows as a circle from the toggle
-   (startThemeTransition sets --rx, --ry and --rr) */
 html.theme-transition::view-transition-old(root),
 html.theme-transition::view-transition-new(root) {
   animation: none;
@@ -409,8 +386,6 @@ html.theme-transition * {
   transition: transform var(--d-3) var(--e-out);
 }
 
-/* the dot pulses once in the first 30% of each 4s cycle; PR 1's reduced-motion
-   rule turns that into a single instant run */
 .now-dot {
   animation: now-pulse 4s infinite;
 }
@@ -442,8 +417,7 @@ html.theme-transition * {
   }
 }
 
-/* a page skeleton's copy fading out over the page that replaced it
-   (useSkeletonCrossfade); above the phone dock, which it covers too */
+/* above the phone dock, which the skeleton covered too */
 .skeleton-ghost {
   z-index: 30;
   pointer-events: none;
@@ -459,7 +433,6 @@ html.theme-transition * {
   }
 }
 
-/* Courses motion */
 @keyframes cf-roll-out {
   to {
     transform: translateY(-100%);
@@ -537,7 +510,7 @@ html.theme-transition * {
   border-radius: inherit;
   border: 2px solid var(--accent);
   pointer-events: none;
-  /* Starts once the push transition that landed here has played. */
+  /* starts once the push transition that landed here has played */
   animation: cf-ring-pulse 600ms var(--e-out) var(--d-3) 1 both;
 }
 
@@ -549,7 +522,6 @@ html.theme-transition * {
   ::view-transition-image-pair(cf-panel) {
     overflow: clip;
   }
-  /* phone panels are inset 16px a side; desktop ones touch without a gap */
   @media (min-width: 1024px) {
     html:active-view-transition-type(panel-forward, panel-back) {
       --pane-gap: 32px;
@@ -579,10 +551,7 @@ html.theme-transition * {
   }
 }
 
-/* Timetable surfaces */
-
-/* The picker's ghost block fades in on mount and out before it unmounts.
-   Opaque blend so a same-slot swap cleanly covers the outgoing tile beneath. */
+/* opaque, so a same-slot swap hides the outgoing tile beneath */
 .tt-ghost {
   opacity: 0;
   background-color: color-mix(in oklab, var(--ev) 45%, var(--surface));
@@ -597,9 +566,7 @@ html.theme-transition * {
   }
 }
 
-/* A course's colour (--h and chroma scale --k from courseHues), redefines
-   tile tokens so bg-ev, border-line, hover and muted text inside all follow
-   the course. Dusty pastels in light, deep tiles with light text in dark */
+/* redefines tile tokens from --h and --k so everything inside follows the course */
 .course-tint {
   --ev: oklch(91% calc(0.06 * var(--k, 1)) var(--h));
   --ev-hover: oklch(88% calc(0.07 * var(--k, 1)) var(--h));
@@ -626,8 +593,6 @@ html.theme-transition * {
   outline-color: oklch(65% calc(0.08 * var(--k, 1)) var(--h));
 }
 
-/* The section a hovered pick would swap out: a faded, struck-through
-   danger tint, dashed like the ghost that replaces it */
 .tt-outgoing {
   background-color: color-mix(in oklab, var(--danger-bg) 60%, var(--ev));
   outline: 1.5px dashed color-mix(in oklab, var(--danger) 70%, transparent);
@@ -642,8 +607,6 @@ html.theme-transition * {
   }
 }
 
-/* Sections animate in and out (spec §9). The surface tags each block with
-   data-presence; the export never gets "entering" or "leaving". */
 [data-presence] {
   transition:
     opacity var(--d-2) var(--e-out),
@@ -663,7 +626,6 @@ html.theme-transition * {
   transition-timing-function: var(--e-in);
 }
 
-/* Agenda rows collapse through grid-template-rows so the rows below slide */
 .tt-row {
   display: grid;
   grid-template-rows: 1fr;
@@ -682,8 +644,6 @@ html.theme-transition * {
   }
 }
 
-/* Same-route surface transitions (spec §9, C7). Names exist only while their
-   transition runs, so route transitions and the export never see them. */
 @keyframes tt-day-scroll-out {
   to {
     transform: translateY(var(--tt-day-scroll, 0px));
@@ -695,16 +655,13 @@ html.theme-transition * {
   }
 }
 
-/* keep the snapshots from swallowing taps; Chrome still sends taps during a
-   transition to <html>, so the phone dock re-routes its own (TimetableDock) */
+/* Chrome still sends mid-transition taps to <html>, so TimetableDock re-routes its own */
 ::view-transition {
   pointer-events: none;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  /* the phone dock is fixed over the page. left in the root snapshot, every
-  named snapshot (grid, blocks, agenda) would paint over it, so lift it into
-  its own group on top and show it live: no fade, no slide */
+  /* named snapshots would paint over a dock left in root, so lift it on top and show it live */
   html:active-view-transition-type(view-morph, orient, day-next, day-prev) {
     & .dock {
       view-transition-name: tt-dock;
@@ -730,9 +687,8 @@ html.theme-transition * {
       animation-duration: var(--d-3);
       animation-timing-function: var(--e-out);
     }
-    /* the UA default scales each snapshot to the group's width, which
-    stretches text between an agenda row and a week tile. keep the text at
-    its own size, pinned top-left, and let the growing box reveal it */
+    /* the UA scales snapshots to the group's width, stretching text between row and tile;
+    keep it at its own size and let the growing box reveal it */
     &::view-transition-old(.tt-block),
     &::view-transition-new(.tt-block) {
       height: 100%;
@@ -745,10 +701,8 @@ html.theme-transition * {
     &::view-transition-new(root) {
       animation: fade-in var(--d-2) var(--e-out) both;
     }
-    /* the grid card is its own group; fade it like the page so the old and
-    new axis labels don't overlap mid-morph. the home-card rule covers the
-    group with each snapshot, which blows the agenda's time column up while
-    the group is still week-sized, so keep these at their own size too */
+    /* fade like the page so old and new axis labels don't overlap; object-fit: none stops
+    the home-card cover rule blowing up the agenda's time column */
     &::view-transition-old(timetable-grid),
     &::view-transition-new(timetable-grid) {
       object-fit: none;
@@ -764,10 +718,7 @@ html.theme-transition * {
     & .tt-agenda {
       view-transition-name: tt-agenda;
     }
-    /* only the agenda slides: the new page sits plainly on top of the old
-    one. without normal blending the two would add up (plus-lighter) and
-    brighten the page, and the old day pill would show through. both scroll
-    back to the top together when the page was scrolled (useSurfaceNav) */
+    /* plus-lighter would brighten the page and show the old day pill through */
     &::view-transition-old(root),
     &::view-transition-new(root) {
       mix-blend-mode: normal;

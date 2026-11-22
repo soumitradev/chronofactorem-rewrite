@@ -21,7 +21,7 @@ const SheetContent = React.forwardRef<
   React.ElementRef<typeof Drawer.Content>,
   React.ComponentPropsWithoutRef<typeof Drawer.Content> & {
     full?: boolean
-    /** Accessible name when no SheetHeader is rendered (visually hidden). */
+    // accessible name when no SheetHeader is rendered (visually hidden)
     title?: string
   }
 >(({ full = false, title, className, children, ...props }, ref) => (

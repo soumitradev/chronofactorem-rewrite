@@ -5,11 +5,6 @@ const PATHS = [
   "M732.843 96.4466 662.132 25.7359 379.289 308.579 450 379.289Z",
 ];
 
-/**
- * Fills the background of pages that are otherwise mostly empty: login,
- * register, about, not found and the timetable load error. Busier pages, and
- * Home, which has its own empty state, leave it out.
- */
 export function CruxMark() {
   return (
     <div className="crux-mark">

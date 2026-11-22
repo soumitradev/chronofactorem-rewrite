@@ -2,10 +2,6 @@ import { LoaderCircle } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-/**
- * Crossfades a button's label to a spinner without changing its width.
- * The button itself also gets `disabled` and `aria-busy` while loading.
- */
 export function ButtonLabel({
   loading,
   children,

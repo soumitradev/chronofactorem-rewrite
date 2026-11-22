@@ -6,17 +6,11 @@ export type Presence = "present" | "entering" | "leaving";
 
 const LEAVE_MS = 200; // --d-2
 
-/**
- * Tags each section as it comes and goes. A section id that wasn't in the
- * previous `sections` is `entering`; one that disappeared stays in the list as
- * `leaving` for --d-2 so it can animate out. Nothing is tagged on the first
- * render, and `disabled` (export) returns everything `present`.
- */
 export function useSectionPresence(
   sections: TimetableSectionType[],
   opts: { disabled: boolean },
 ): { section: TimetableSectionType; presence: Presence }[] {
-  // under reduced motion nothing animates, so nothing needs to linger either
+  // nothing animates under reduced motion, so nothing needs to linger
   const off = opts.disabled || prefersReducedMotion();
   const [prev, setPrev] = useState(sections);
   const [entering, setEntering] = useState<ReadonlySet<string>>(new Set());

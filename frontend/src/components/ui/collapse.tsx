@@ -10,7 +10,6 @@ export function Collapse({
   open: boolean;
   children: React.ReactNode;
   onExited?: () => void;
-  // mount expanded, then transition to `open`
   appearOpen?: boolean;
 }) {
   return (
