@@ -1,6 +1,6 @@
 import { useIsMutating } from "@tanstack/react-query";
 import type { sectionType } from "lib";
-import { Check, ChevronLeft, HelpCircle } from "lucide-react";
+import { ChevronLeft, HelpCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type z from "zod";
 import { useTimetableState } from "@/context";
@@ -9,7 +9,7 @@ import {
   useRemoveTimetableCourse,
   useSwapTimetableSections,
 } from "@/data-access/timetables";
-import { formatExam, summarizeRoomTimes } from "@/lib/formatTime";
+import { formatExam } from "@/lib/formatTime";
 import { HapticTap, haptic } from "@/lib/haptics";
 import { useSkeletonFadeIn } from "@/lib/skeletonFade";
 import { titleCase } from "@/lib/titleCase";
@@ -18,13 +18,9 @@ import { useSwipe } from "@/lib/useSwipe";
 import { useTimetableNav } from "@/lib/useTimetableNav";
 import { cn } from "@/lib/utils";
 import { PANEL_VT_CLASS, prefersReducedMotion } from "@/lib/viewTransitions";
-import {
-  ClashingWith,
-  ClashPill,
-  markClashLanding,
-  useClashLanding,
-} from "./ClashPills";
+import { markClashLanding, useClashLanding } from "./ClashPills";
 import { group } from "./listStyles";
+import { SectionList } from "./SectionList";
 import { Badge } from "./ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Roll } from "./ui/roll";
@@ -41,8 +37,6 @@ const typeNames: Record<SectionKind, string> = {
 };
 
 const sectionGroup = cn(group, "mt-2.5 mb-6");
-
-const rowGrid = "grid grid-cols-[40px_1fr_auto] gap-x-2.5 px-3.5 py-[13px]";
 
 const ADVANCE_DELAY = 350;
 
@@ -81,27 +75,6 @@ function ExamLine({
         </Popover>
       )}
     </span>
-  );
-}
-
-function SectionText({ section }: { section: Section }) {
-  return (
-    <>
-      <span className="font-mono text-sm font-medium text-ink">
-        {section.type}
-        {section.number}
-      </span>
-      <span className="flex min-w-0 flex-col">
-        <span className="text-[14px] font-medium text-ink">
-          {section.instructors.join(", ")}
-        </span>
-        {summarizeRoomTimes(section.roomTime).map((line) => (
-          <span key={line} className="font-mono text-xs text-ink-muted">
-            {line}
-          </span>
-        ))}
-      </span>
-    </>
   );
 }
 
@@ -175,8 +148,6 @@ const CourseDetailsMenu = ({
       { onSuccess: () => closeCourse() },
     );
   };
-  // a section's day and hour, without the course code and room
-  const slot = (roomTime: string) => roomTime.split(":").slice(2).join(":");
 
   const fadeIn = useSkeletonFadeIn(course === undefined);
 
@@ -229,125 +200,26 @@ const CourseDetailsMenu = ({
     onSectionHover?.(id);
   };
 
+  // same course: slide to the type, don't push the panel
+  const pickClash = (item: { courseId: string; type: SectionKind }) => {
+    markClashLanding(item.courseId, item.type);
+    if (item.courseId === currentCourseID) {
+      cancelAdvance();
+      setType(item.type);
+    } else {
+      openCourse(item.courseId, {
+        type: item.type,
+        transition: "panel-forward",
+      });
+    }
+  };
+
   if (timetable === undefined) return;
 
   const chosen = (type: string) =>
     timetable.sections.find(
       (item) => item.courseId === currentCourseID && item.type === type,
     );
-
-  const sectionsOf = (type: SectionKind) =>
-    (course?.sections ?? [])
-      .filter((section) => section.type === type)
-      .map((section) => ({
-        section,
-        // picking another section of the same course and type swaps it, so those don't clash
-        clashing: timetable.sections.filter(
-          (item) =>
-            !(
-              item.courseId === section.courseId && item.type === section.type
-            ) &&
-            item.roomTime.some((existing) =>
-              section.roomTime.some(
-                (incoming) => slot(existing) === slot(incoming),
-              ),
-            ),
-        ),
-      }));
-
-  const renderList = (type: SectionKind, current: boolean) => (
-    <div className={cn(sectionGroup, fadeIn.className)}>
-      {sectionsOf(type).map(({ section, clashing }) => {
-        if (clashing.length > 0) {
-          return (
-            <div key={section.id} className={rowGrid}>
-              <button
-                type="button"
-                disabled
-                className="col-span-3 grid grid-cols-subgrid text-left opacity-50"
-              >
-                <SectionText section={section} />
-              </button>
-              <div className="col-span-2 col-start-2 min-w-0">
-                <ClashingWith>
-                  {clashing.map((item) => (
-                    <ClashPill
-                      key={item.id}
-                      label={`${item.roomTime[0].split(":")[0]} ${item.type}${item.number}`}
-                      onSelect={
-                        // same course: slide to the type, don't push the panel
-                        item.courseId === currentCourseID
-                          ? () => {
-                              cancelAdvance();
-                              markClashLanding(item.courseId, item.type);
-                              setType(item.type);
-                            }
-                          : () => {
-                              markClashLanding(item.courseId, item.type);
-                              openCourse(item.courseId, {
-                                type: item.type,
-                                transition: "panel-forward",
-                              });
-                            }
-                      }
-                    />
-                  ))}
-                </ClashingWith>
-              </div>
-            </div>
-          );
-        }
-        const selected = selectedIds.has(section.id);
-        const fresh = selected && !seen.current.ids.has(section.id);
-        return (
-          <button
-            key={section.id}
-            type="button"
-            aria-pressed={selected}
-            aria-busy={busy || undefined}
-            onClick={() => handleSectionClick(section)}
-            onPointerEnter={(e) => {
-              if (e.pointerType === "mouse") hover(section.id);
-            }}
-            onPointerLeave={(e) => {
-              if (e.pointerType === "mouse") hover(null);
-            }}
-            onAnimationEnd={(e) => {
-              if (e.animationName === "cf-ring-pulse") setPulsedNonce(landed);
-            }}
-            className={cn(
-              rowGrid,
-              "relative w-full cursor-pointer items-start text-left transition-colors duration-(--d-2) focus-visible:outline-offset-[-2px]",
-              selected
-                ? "bg-brand-bg bg-[linear-gradient(to_right,var(--accent)_3px,transparent_3px)]"
-                : "hover:bg-sunk",
-              selected && current && pulse && "cf-ring-pulse",
-              busy && "cursor-progress",
-            )}
-          >
-            <SectionText section={section} />
-            {selected ? (
-              <span
-                onAnimationEnd={(e) => {
-                  if (e.animationName === "cf-tick-in")
-                    seen.current.ids.add(section.id);
-                }}
-                className={cn(
-                  "grid size-[22px] place-items-center self-center rounded-full bg-brand text-brand-ink",
-                  fresh && "animate-[cf-tick-in_var(--d-3)_var(--e-spring)]",
-                )}
-              >
-                <Check size={14} strokeWidth={3} aria-hidden="true" />
-              </span>
-            ) : (
-              <span className="size-[22px] self-center rounded-full border-[1.5px] border-line" />
-            )}
-            {!busy && <HapticTap />}
-          </button>
-        );
-      })}
-    </div>
-  );
 
   return (
     <div className={cn("flex h-full min-h-0 flex-col", PANEL_VT_CLASS)}>
@@ -477,7 +349,20 @@ const CourseDetailsMenu = ({
                         : undefined
                     }
                   >
-                    {renderList(pane.type, offset === 0)}
+                    <SectionList
+                      sections={course.sections.filter(
+                        (section) => section.type === pane.type,
+                      )}
+                      chosen={timetable.sections}
+                      seenIds={seen.current.ids}
+                      pulse={offset === 0 && pulse}
+                      busy={busy}
+                      className={cn(sectionGroup, fadeIn.className)}
+                      onPick={handleSectionClick}
+                      onHover={hover}
+                      onClashPick={pickClash}
+                      onPulsed={() => setPulsedNonce(landed)}
+                    />
                   </div>
                 );
               })}
