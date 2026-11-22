@@ -1,10 +1,10 @@
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef } from "react";
-import { hueStyle } from "@/lib/courseHues";
 import { formatSlotEnd, formatSlotStart } from "@/lib/formatTime";
 import { titleCase } from "@/lib/titleCase";
 import {
-  blockName,
+  blockProps,
   buildAgenda,
+  type SurfaceMode,
   type TimetableCell,
   timetableDayNames,
 } from "@/utils/timetableGrid";
@@ -16,7 +16,7 @@ import { RemoveButton } from "./RemoveButton";
 type AgendaProps = {
   cells: TimetableCell[];
   day: number;
-  mode: "edit" | "view" | "export";
+  mode: SurfaceMode;
   pending?: boolean;
   /** Today's grid hour and the formatted time; set only when it is on this day. */
   now?: { hour: number; fraction: number; label: string } | null;
@@ -56,6 +56,56 @@ function BlockBody({
         {cell.room}
       </span>
     </>
+  );
+}
+
+function AgendaBlock({
+  cell,
+  mode,
+  pending,
+  onOpen,
+  onRemove,
+}: Pick<AgendaProps, "mode" | "pending" | "onOpen" | "onRemove"> & {
+  cell: TimetableCell;
+}) {
+  const leaving = cell.presence === "leaving";
+  const block = blockProps(cell, mode);
+  const shared = {
+    "data-presence": cell.presence ?? "present",
+    inert: leaving,
+    style: block.style,
+  };
+  return mode === "edit" ? (
+    // the open button and the × are siblings, never nested
+    <div
+      {...shared}
+      className={`${blockClass} ${block.className} relative hover:bg-ev-hover`}
+    >
+      <OpenButton
+        cell={cell}
+        disabled={pending || leaving}
+        onOpen={onOpen}
+        onRemove={onRemove}
+        className={bodyClass}
+      >
+        <BlockBody cell={cell} remove />
+      </OpenButton>
+      <RemoveButton
+        cell={cell}
+        disabled={pending || leaving}
+        onRemove={onRemove}
+        iconSize={14}
+        className="top-1.5 right-1.5 size-5 after:size-11"
+        hitClassName="size-11"
+      />
+    </div>
+  ) : (
+    <div
+      {...shared}
+      className={`${blockClass} ${bodyClass} ${block.className}`}
+    >
+      <BlockBody cell={cell} />
+    </div>
   );
 }
 
@@ -110,18 +160,6 @@ export function Agenda({
     );
   }
 
-  // live blocks carry their morph name (C7); it only applies during a morph
-  const named = (cell: TimetableCell) =>
-    cell.presence === "leaving" || mode === "export"
-      ? { className: "", style: hueStyle(cell.hue) }
-      : {
-          className: "tt-block",
-          style: {
-            ...hueStyle(cell.hue),
-            "--vt": blockName(cell),
-          } as React.CSSProperties,
-        };
-
   // the 10 minutes after a class are its break, not part of it. during the
   // class the now-line runs through its block at the share gone by (0–1)
   const elapsed = (cell: TimetableCell) =>
@@ -169,42 +207,13 @@ export function Agenda({
                       {formatSlotEnd(item.cell.hour, item.cell.span)}
                     </div>
                   </div>
-                  {mode === "edit" ? (
-                    // the open button and the × are siblings, never nested
-                    <div
-                      data-presence={item.cell.presence ?? "present"}
-                      inert={item.cell.presence === "leaving"}
-                      style={named(item.cell).style}
-                      className={`${blockClass} ${named(item.cell).className} relative hover:bg-ev-hover`}
-                    >
-                      <OpenButton
-                        cell={item.cell}
-                        disabled={pending || item.cell.presence === "leaving"}
-                        onOpen={onOpen}
-                        onRemove={onRemove}
-                        className={bodyClass}
-                      >
-                        <BlockBody cell={item.cell} remove />
-                      </OpenButton>
-                      <RemoveButton
-                        cell={item.cell}
-                        disabled={pending || item.cell.presence === "leaving"}
-                        onRemove={onRemove}
-                        iconSize={14}
-                        className="top-1.5 right-1.5 size-5 after:size-11"
-                        hitClassName="size-11"
-                      />
-                    </div>
-                  ) : (
-                    <div
-                      data-presence={item.cell.presence ?? "present"}
-                      inert={item.cell.presence === "leaving"}
-                      style={named(item.cell).style}
-                      className={`${blockClass} ${bodyClass} ${named(item.cell).className}`}
-                    >
-                      <BlockBody cell={item.cell} />
-                    </div>
-                  )}
+                  <AgendaBlock
+                    cell={item.cell}
+                    mode={mode}
+                    pending={pending}
+                    onOpen={onOpen}
+                    onRemove={onRemove}
+                  />
                   {now && isDuring(item.cell) && (
                     <NowLine.Through
                       label={now.label}

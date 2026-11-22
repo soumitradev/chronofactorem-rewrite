@@ -1,6 +1,6 @@
-import { hueStyle } from "@/lib/courseHues";
 import {
-  blockName,
+  blockProps,
+  type SurfaceMode,
   splitCode,
   type TimetableCell,
 } from "@/utils/timetableGrid";
@@ -13,7 +13,7 @@ type WeekGridProps = {
   cells: TimetableCell[];
   dayCount: number;
   hourCount: number;
-  mode: "edit" | "view" | "export";
+  mode: SurfaceMode;
   pending?: boolean;
   onOpen?: (
     cell: TimetableCell,
@@ -117,15 +117,12 @@ export function WeekGrid({
       {cells.map((cell) => {
         const key = `${cell.id}-${cell.day}-${cell.hour}`;
         const leaving = cell.presence === "leaving";
-        // live tiles carry their morph name (C7); export and leaving don't
-        const named = mode !== "export" && !leaving;
+        const block = blockProps(cell, mode);
         const placement = {
           gridColumn: cell.day + 2,
           gridRow: `${cell.hour + 2} / span ${cell.span}`,
-          ...hueStyle(cell.hue),
-          ...(named ? { "--vt": blockName(cell) } : {}),
-        } as React.CSSProperties;
-        const nameClass = named ? "tt-block" : "";
+          ...block.style,
+        };
         return mode === "edit" ? (
           // the open button and the × are siblings, never nested
           <div
@@ -133,7 +130,7 @@ export function WeekGrid({
             style={placement}
             data-presence={cell.presence ?? "present"}
             inert={leaving}
-            className={`@container ${tileClass} ${nameClass} hover:bg-ev-hover`}
+            className={`@container ${tileClass} ${block.className} hover:bg-ev-hover`}
           >
             <OpenButton
               cell={cell}
@@ -161,7 +158,7 @@ export function WeekGrid({
             style={placement}
             data-presence={cell.presence ?? "present"}
             inert={leaving}
-            className={`@container ${tileClass} ${padClass} ${nameClass}`}
+            className={`@container ${tileClass} ${padClass} ${block.className}`}
           >
             <TileBody cell={cell} />
           </div>
