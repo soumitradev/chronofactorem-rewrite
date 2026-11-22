@@ -1,4 +1,6 @@
 import {
+  defaultParseSearch,
+  defaultStringifySearch,
   type HistoryState,
   useNavigate,
   useRouter,
@@ -8,7 +10,6 @@ import { useCallback, useMemo } from "react";
 import type { TimetableSearch } from "./timetableSearch";
 import { matchesDesktop } from "./useIsDesktop";
 import {
-  markSheetClosing,
   prefersReducedMotion,
   type SurfaceTransition,
   supportsTransitionTypes,
@@ -54,11 +55,6 @@ export function useTimetableNav() {
           ? {
               chronoNav: true,
               sheetDepth: curSearch.sheet ? (cur.state.sheetDepth ?? 0) + 1 : 1,
-              sheetDeepRoot: curSearch.sheet
-                ? cur.state.sheetDepth
-                  ? cur.state.sheetDeepRoot
-                  : true
-                : undefined,
             }
           : { chronoNav: true };
       }
@@ -122,27 +118,11 @@ export function useTimetableNav() {
       },
       closeSheet: () => {
         const loc = router.latestLocation;
-        const { sheetDepth, sheetDeepRoot } = loc.state;
+        const { sheetDepth } = loc.state;
+        // a desktop link skips normalizeDeepLinkedSheet, then the window shrinks
         if (!sheetDepth || !loc.search.sheet) {
           back(stripSheet);
           return;
-        }
-        if (sheetDeepRoot) {
-          // the entry we land on was deep-linked with the sheet open, so
-          // remove it in place once the history move resolves
-          let timer: ReturnType<typeof setTimeout> | undefined;
-          const unsub = router.subscribe("onResolved", () => {
-            clearTimeout(timer);
-            unsub();
-            go(stripSheet, { push: false });
-          });
-          // never leave a stray listener, or a URL claiming a closed sheet
-          timer = setTimeout(() => {
-            unsub();
-            if (router.latestLocation.search.sheet)
-              go(stripSheet, { push: false });
-          }, 1000);
-          markSheetClosing();
         }
         router.history.go(-sheetDepth);
       },
@@ -205,4 +185,47 @@ export function useTimetableNav() {
         }),
     };
   }, [search, go, back, router]);
+}
+
+// A deep-linked sheet has no entry of ours below it, so closing it would
+// leave the page. Before the router reads history, put the page without the
+// sheet below it and push the sheet the way opening it would have
+export function normalizeDeepLinkedSheet(): void {
+  const { pathname, search, hash } = window.location;
+  const current = window.history.state as
+    | (HistoryState & { __TSR_index?: number })
+    | null;
+  const s = defaultParseSearch(search) as TimetableSearch;
+  if (!s.sheet || current?.chronoNav) return;
+
+  let entries: [TimetableSearch, HistoryState][];
+  if (s.sheet === "announcements") {
+    const { sheet: _s, ...rest } = s;
+    entries = [
+      [rest, {}],
+      [s, { chronoNav: true }],
+    ];
+  } else if (
+    (s.sheet === "courses" || s.sheet === "warnings") &&
+    /^\/(edit|view)\//.test(pathname) &&
+    !matchesDesktop()
+  ) {
+    entries = [
+      [stripSheet(s), {}],
+      [stripCourse(s), { chronoNav: true, sheetDepth: 1 }],
+    ];
+    if (s.course) entries.push([s, { chronoNav: true, sheetDepth: 2 }]);
+  } else {
+    return;
+  }
+
+  const index = current?.__TSR_index ?? 0;
+  entries.forEach(([entrySearch, state], i) => {
+    // the same keys @tanstack/history gives every entry
+    const key = (Math.random() + 1).toString(36).substring(7);
+    const href = `${pathname}${defaultStringifySearch(entrySearch)}${hash}`;
+    const next = { ...state, key, __TSR_key: key, __TSR_index: index + i };
+    if (i === 0) window.history.replaceState(next, "", href);
+    else window.history.pushState(next, "", href);
+  });
 }

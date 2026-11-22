@@ -3,6 +3,7 @@ import { Router } from "@tanstack/react-router";
 import { AxiosError } from "axios";
 import NotFound from "./components/NotFound";
 import { trackSharedTimetable } from "./lib/sharedTransition";
+import { normalizeDeepLinkedSheet } from "./lib/useTimetableNav";
 import {
   releaseStillNavbar,
   routeTransitionTypes,
@@ -28,6 +29,9 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+// the router reads history once it is built
+normalizeDeepLinkedSheet();
 
 export const router = new Router({
   routeTree,
@@ -66,10 +70,7 @@ declare module "@tanstack/react-router" {
   interface HistoryState {
     // pushed by the app, so back can pop it instead of leaving the page
     chronoNav?: boolean;
-    rootSheet?: string;
     // how many entries deep into the open sheet this one is
     sheetDepth?: number;
-    // the sheet was already open on the entry below the first push (deep link)
-    sheetDeepRoot?: boolean;
   }
 }
