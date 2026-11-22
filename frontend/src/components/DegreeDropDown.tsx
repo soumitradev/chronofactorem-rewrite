@@ -1,3 +1,9 @@
+import {
+  approvedBEDegreeList,
+  approvedBPharmDegreeList,
+  type approvedDegreeList,
+  approvedMScDegreeList,
+} from "lib";
 import { useId } from "react";
 import { cn } from "@/lib/utils";
 import { Label } from "./ui/label";
@@ -11,7 +17,10 @@ import {
   SelectValue,
 } from "./ui/select";
 
-const DEGREES: Record<string, string> = {
+type Degree = (typeof approvedDegreeList)[number];
+
+// typed by lib's list, so a new degree code fails the build until it has a name
+const DEGREES: Record<Degree, string> = {
   A1: "B.E. Chemical",
   A2: "B.E. Civil",
   A3: "B.E. Electrical & Electronics",
@@ -30,9 +39,12 @@ const DEGREES: Record<string, string> = {
   B7: "M.Sc. Semiconductor and Nanoscience",
 };
 
-const FIRST_SINGLE = ["A1", "A2", "A3", "A4", "A5", "A7", "A8", "AA", "AD"];
-const SECOND_SINGLE = ["A1", "A2", "A3", "A4", "A7", "A8", "AA", "AD", "AJ"];
-const DUAL = ["B1", "B2", "B3", "B4", "B5", "B7"];
+const FIRST_SINGLE = [
+  ...approvedBEDegreeList,
+  ...approvedBPharmDegreeList,
+].sort();
+const SECOND_SINGLE = approvedBEDegreeList;
+const DUAL = approvedMScDegreeList;
 
 function DegreeGroup({
   label,
@@ -40,7 +52,7 @@ function DegreeGroup({
   children,
 }: {
   label: string;
-  codes: string[];
+  codes: readonly Degree[];
   children?: React.ReactNode;
 }) {
   return (
