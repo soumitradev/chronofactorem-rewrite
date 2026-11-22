@@ -11,7 +11,6 @@ import {
   decodeTimetableSqidOr404,
   fetchAuthorOrError,
   fetchTimetableOrError,
-  queryOr500,
 } from "./helpers.js";
 
 const dataSchema = z.object({
@@ -28,17 +27,11 @@ const dataSchema = z.object({
 export const editTimetableMetadataValidator = validate(dataSchema);
 
 export const editTimetableMetadata = async (req: Request, res: Response) => {
-  const logger = req.log;
   const name: string = req.body.name;
   const isPrivate: boolean = req.body.isPrivate;
   const isDraft: boolean = req.body.isDraft;
 
-  const author = await fetchAuthorOrError(
-    req,
-    res,
-    logger,
-    "Error while querying user: ",
-  );
+  const author = await fetchAuthorOrError(req, res);
   if (!author) {
     return;
   }
@@ -54,10 +47,9 @@ export const editTimetableMetadata = async (req: Request, res: Response) => {
     return;
   }
 
-  const timetable = await fetchTimetableOrError(res, logger, dbID, {
+  const timetable = await fetchTimetableOrError(res, dbID, {
     authorId: author.id,
     joinSections: true,
-    queryErrorLogMessage: "Error while querying timetable: ",
   });
   if (!timetable) {
     return;
@@ -88,21 +80,12 @@ export const editTimetableMetadata = async (req: Request, res: Response) => {
     });
   }
 
-  const saved = await queryOr500(
-    res,
-    logger,
-    "Error while editing timetable: ",
-    () =>
-      timetableRepository.save({
-        ...timetable,
-        name: name,
-        private: isPrivate,
-        draft: isDraft,
-      }),
-  );
-  if (saved === undefined) {
-    return;
-  }
+  await timetableRepository.save({
+    ...timetable,
+    name: name,
+    private: isPrivate,
+    draft: isDraft,
+  });
 
   return res.json({ message: "timetable edited" });
 };

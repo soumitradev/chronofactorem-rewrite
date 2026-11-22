@@ -28,18 +28,14 @@ const dataSchema = z.object({
 export const updateChangedTimetableValidator = validate(dataSchema);
 
 export const updateChangedTimetable = async (req: Request, res: Response) => {
-  const logger = req.log;
   if (env.CHRONO_SECRET !== req.body.chronoSecret) {
     return res.status(401).json({ message: "Chrono Secret is incorrect" });
   }
   // Use a transaction because we will run many dependent mutations
-  const queryRunner = AppDataSource.createQueryRunner();
-  await queryRunner.connect();
-  await queryRunner.startTransaction();
-  try {
+  await AppDataSource.transaction(async (manager) => {
     // Update the course's exam timings, also make sure that the course is not archived
     const course: Course = req.body.course;
-    await queryRunner.manager
+    await manager
       .createQueryBuilder()
       .update(Course)
       .set({
@@ -54,12 +50,12 @@ export const updateChangedTimetable = async (req: Request, res: Response) => {
 
     // Fetch the total types of sections of that course (required later to update warnings)
     const requiredSectionTypes: sectionTypeList = await getCourseSectionTypes(
-      queryRunner.manager,
+      manager,
       course.id,
     );
 
     // Fetch the timetables that are affected, archived timetables cannot be affected
-    const timetables: Timetable[] = await queryRunner.manager
+    const timetables: Timetable[] = await manager
       .createQueryBuilder(Timetable, "timetable")
       .leftJoinAndSelect("timetable.sections", "section")
       .where("section.courseId = :id", { id: course?.id })
@@ -93,7 +89,7 @@ export const updateChangedTimetable = async (req: Request, res: Response) => {
         if (checkForExamHoursClash(timetable, course).clash) {
           // If they do, then remove all sections of the course with updated timings
           for (const sec of timetable.sections) {
-            await queryRunner.manager
+            await manager
               .createQueryBuilder()
               .relation(Timetable, "sections")
               .of(timetable)
@@ -117,7 +113,7 @@ export const updateChangedTimetable = async (req: Request, res: Response) => {
         if (newSection !== undefined) {
           // Start off by removing the existing section, both in DB and the timings column of the timetable
           removeSection(timetable, section);
-          await queryRunner.manager
+          await manager
             .createQueryBuilder()
             .relation(Timetable, "sections")
             .of(timetable)
@@ -143,7 +139,7 @@ export const updateChangedTimetable = async (req: Request, res: Response) => {
                 `${course?.code}:${time.split(":")[2]}${time.split(":")[3]}`,
             );
             // Add the section back to the timetable
-            await queryRunner.manager
+            await manager
               .createQueryBuilder()
               .relation(Timetable, "sections")
               .of(timetable)
@@ -186,7 +182,7 @@ export const updateChangedTimetable = async (req: Request, res: Response) => {
       sections: Section[] | undefined;
     };
     const timetablesWithoutSections: timetableWithoutSections[] = timetables;
-    await queryRunner.manager.save(
+    await manager.save(
       timetablesWithoutSections.map((x) => {
         x.sections = undefined;
         return x;
@@ -196,23 +192,13 @@ export const updateChangedTimetable = async (req: Request, res: Response) => {
     // Regardless of whether or not a section was present in a timetable,
     // update the section's timings
     for (const section of course.sections) {
-      await queryRunner.manager
+      await manager
         .createQueryBuilder()
         .update(Section, { roomTime: section.roomTime })
         .where("section.id = :id", { id: section?.id })
         .execute();
     }
-    // After everything passes fine, commit the transaction
-    await queryRunner.commitTransaction();
+  });
 
-    return res.json({ message: "Timetable successfully updated" });
-  } catch (err: any) {
-    if (queryRunner.isTransactionActive) {
-      await queryRunner.rollbackTransaction();
-    }
-    logger.error(err);
-    return res.status(500).json({ message: "Internal Server Error" });
-  } finally {
-    await queryRunner.release();
-  }
+  return res.json({ message: "Timetable successfully updated" });
 };

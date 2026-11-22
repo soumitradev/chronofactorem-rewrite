@@ -1,6 +1,5 @@
 import type { Request, Response } from "express";
 import type { sectionTypeList } from "lib";
-import type { Logger } from "pino";
 import type { EntityManager } from "typeorm";
 import { Section, type Timetable, type User } from "../../entity/entities.js";
 import {
@@ -9,41 +8,16 @@ import {
 } from "../../repositories/index.js";
 import sqids, { validSqid } from "../../utils/sqids.js";
 
-// Runs the given query. On failure, logs `logMessage` with the error and sends
-// a 500 response, then returns undefined so the caller can stop handling the
-// request. Any other value (including null) is the query's own result.
-export const queryOr500 = async <T>(
-  res: Response,
-  logger: Logger,
-  logMessage: string,
-  query: () => Promise<T>,
-): Promise<T | undefined> => {
-  try {
-    return await query();
-  } catch (err: any) {
-    logger.error(logMessage, err.message);
-    res.status(500).json({ message: "Internal Server Error" });
-    return undefined;
-  }
-};
-
-// Fetches the user behind the current session. Sends a 500 on query error and
-// a 401 if the user is not registered; returns null in both cases.
+// Fetches the user behind the current session. Sends a 401 and returns null if
+// the user is not registered
 export const fetchAuthorOrError = async (
   req: Request,
   res: Response,
-  logger: Logger,
-  queryErrorLogMessage: string,
 ): Promise<User | null> => {
-  const author = await queryOr500(res, logger, queryErrorLogMessage, () =>
-    userRepository
-      .createQueryBuilder("user")
-      .where("user.id = :id", { id: req.session?.id })
-      .getOne(),
-  );
-  if (author === undefined) {
-    return null;
-  }
+  const author = await userRepository
+    .createQueryBuilder("user")
+    .where("user.id = :id", { id: req.session?.id })
+    .getOne();
   if (!author) {
     res.status(401).json({ message: "unregistered user" });
     return null;
@@ -70,14 +44,12 @@ export const decodeTimetableSqidOr404 = (
 // response and returns null on any failure.
 export const fetchTimetableOrError = async (
   res: Response,
-  logger: Logger,
   dbID: number[],
   options: {
     authorId?: string;
     joinSections?: boolean;
     mustBeDraft?: boolean;
     notFoundMessage?: string;
-    queryErrorLogMessage: string;
   },
 ): Promise<Timetable | null> => {
   let timetableQuery = timetableRepository
@@ -89,15 +61,7 @@ export const fetchTimetableOrError = async (
       "section",
     );
   }
-  const timetable = await queryOr500(
-    res,
-    logger,
-    options.queryErrorLogMessage,
-    () => timetableQuery.getOne(),
-  );
-  if (timetable === undefined) {
-    return null;
-  }
+  const timetable = await timetableQuery.getOne();
   if (!timetable) {
     res
       .status(404)

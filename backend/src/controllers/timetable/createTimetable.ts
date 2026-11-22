@@ -4,16 +4,10 @@ import { type Section, Timetable } from "../../entity/entities.js";
 import { timetableRepository } from "../../repositories/index.js";
 import timetableJSON from "../../timetable.json" with { type: "json" };
 import sqids from "../../utils/sqids.js";
-import { fetchAuthorOrError, queryOr500 } from "./helpers.js";
+import { fetchAuthorOrError } from "./helpers.js";
 
 export const createTimetable = async (req: Request, res: Response) => {
-  const logger = req.log;
-  const author = await fetchAuthorOrError(
-    req,
-    res,
-    logger,
-    "Error while querying for user: ",
-  );
+  const author = await fetchAuthorOrError(req, res);
   if (!author) {
     return;
   }
@@ -37,42 +31,31 @@ export const createTimetable = async (req: Request, res: Response) => {
   const lastUpdated: Date = new Date();
   const authorId: string = author.id;
 
-  const timetableID = await queryOr500(
-    res,
-    logger,
-    "Error while creating timetable: ",
-    async () => {
-      const createdTimetable = await timetableRepository
-        .createQueryBuilder()
-        .insert()
-        .into(Timetable)
-        .values({
-          authorId,
-          name,
-          degrees,
-          private: isPrivate,
-          draft: isDraft,
-          archived: isArchived,
-          acadYear,
-          semester,
-          year,
-          sections,
-          timings,
-          examTimes,
-          warnings,
-          createdAt,
-          lastUpdated,
-        })
-        .execute();
+  const createdTimetable = await timetableRepository
+    .createQueryBuilder()
+    .insert()
+    .into(Timetable)
+    .values({
+      authorId,
+      name,
+      degrees,
+      private: isPrivate,
+      draft: isDraft,
+      archived: isArchived,
+      acadYear,
+      semester,
+      year,
+      sections,
+      timings,
+      examTimes,
+      warnings,
+      createdAt,
+      lastUpdated,
+    })
+    .execute();
 
-      return sqids.encode([createdTimetable.identifiers[0].id]);
-    },
-  );
-  if (timetableID === undefined) {
-    return;
-  }
   return res.status(201).json({
     message: "Timetable created successfully",
-    id: timetableID,
+    id: sqids.encode([createdTimetable.identifiers[0].id]),
   });
 };

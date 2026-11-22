@@ -15,7 +15,6 @@ import {
   fetchAuthorOrError,
   fetchTimetableOrError,
   getCourseSectionTypes,
-  queryOr500,
 } from "./helpers.js";
 
 const dataSchema = z.object({
@@ -37,39 +36,24 @@ export const removeSection = async (req: Request, res: Response) => {
   }
   const sectionId = req.body.sectionId;
 
-  const author = await fetchAuthorOrError(
-    req,
-    res,
-    logger,
-    "Error while querying user: ",
-  );
+  const author = await fetchAuthorOrError(req, res);
   if (!author) {
     return;
   }
 
-  const timetable = await fetchTimetableOrError(res, logger, dbID, {
+  const timetable = await fetchTimetableOrError(res, dbID, {
     authorId: author.id,
     joinSections: true,
     mustBeDraft: true,
-    queryErrorLogMessage: "Error while querying timetable: ",
   });
   if (!timetable) {
     return;
   }
 
-  const section = await queryOr500(
-    res,
-    logger,
-    "Error while querying for section: ",
-    () =>
-      sectionRepository
-        .createQueryBuilder("section")
-        .where("section.id = :sectionId", { sectionId })
-        .getOne(),
-  );
-  if (section === undefined) {
-    return;
-  }
+  const section = await sectionRepository
+    .createQueryBuilder("section")
+    .where("section.id = :sectionId", { sectionId })
+    .getOne();
 
   if (section === null) {
     return res.status(404).json({ message: "Section not found" });
@@ -92,19 +76,10 @@ export const removeSection = async (req: Request, res: Response) => {
 
   const courseId = section.courseId;
 
-  const course = await queryOr500(
-    res,
-    logger,
-    "Error while querying for course: ",
-    () =>
-      courseRepository
-        .createQueryBuilder("course")
-        .where("course.id = :id", { id: courseId })
-        .getOne(),
-  );
-  if (course === undefined) {
-    return;
-  }
+  const course = await courseRepository
+    .createQueryBuilder("course")
+    .where("course.id = :id", { id: courseId })
+    .getOne();
 
   if (!course) {
     return res.status(404).json({ message: "course not found" });
@@ -127,15 +102,10 @@ export const removeSection = async (req: Request, res: Response) => {
     });
   }
 
-  const sectionTypes = await queryOr500(
-    res,
-    logger,
-    "Error while querying for course's section types: ",
-    () => getCourseSectionTypes(sectionRepository.manager, courseId),
+  const sectionTypes = await getCourseSectionTypes(
+    sectionRepository.manager,
+    courseId,
   );
-  if (sectionTypes === undefined) {
-    return;
-  }
 
   removeSectionFromTimetable(timetable, section);
 
@@ -158,15 +128,7 @@ export const removeSection = async (req: Request, res: Response) => {
     });
   }
 
-  const saved = await queryOr500(
-    res,
-    logger,
-    "Error while removing section from timetable: ",
-    () => timetableRepository.save(timetable),
-  );
-  if (saved === undefined) {
-    return;
-  }
+  await timetableRepository.save(timetable);
 
   return res.json({ message: "section removed" });
 };

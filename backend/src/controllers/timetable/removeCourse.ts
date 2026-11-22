@@ -15,7 +15,6 @@ import {
   fetchAuthorOrError,
   fetchTimetableOrError,
   getCourseSectionTypes,
-  queryOr500,
 } from "./helpers.js";
 
 const dataSchema = z.object({
@@ -38,39 +37,24 @@ export const removeCourse = async (req: Request, res: Response) => {
   }
   const courseId = req.body.courseId;
 
-  const author = await fetchAuthorOrError(
-    req,
-    res,
-    logger,
-    "Error while querying user: ",
-  );
+  const author = await fetchAuthorOrError(req, res);
   if (!author) {
     return;
   }
 
-  const timetable = await fetchTimetableOrError(res, logger, dbID, {
+  const timetable = await fetchTimetableOrError(res, dbID, {
     authorId: author.id,
     joinSections: true,
     mustBeDraft: true,
-    queryErrorLogMessage: "Error while querying timetable: ",
   });
   if (!timetable) {
     return;
   }
 
-  const course = await queryOr500(
-    res,
-    logger,
-    "Error while querying for course: ",
-    () =>
-      courseRepository
-        .createQueryBuilder("course")
-        .where("course.id = :id", { id: courseId })
-        .getOne(),
-  );
-  if (course === undefined) {
-    return;
-  }
+  const course = await courseRepository
+    .createQueryBuilder("course")
+    .where("course.id = :id", { id: courseId })
+    .getOne();
 
   if (!course) {
     return res.status(404).json({ message: "course not found" });
@@ -90,15 +74,10 @@ export const removeCourse = async (req: Request, res: Response) => {
     });
   }
 
-  const sectionTypes = await queryOr500(
-    res,
-    logger,
-    "Error while querying for course's section types: ",
-    () => getCourseSectionTypes(sectionRepository.manager, courseId),
+  const sectionTypes = await getCourseSectionTypes(
+    sectionRepository.manager,
+    courseId,
   );
-  if (sectionTypes === undefined) {
-    return;
-  }
 
   timetable.examTimes = timetable.examTimes.filter((examTime) => {
     return examTime.split("|")[0] !== course.code;
@@ -127,37 +106,26 @@ export const removeCourse = async (req: Request, res: Response) => {
     }
   }
 
-  const removed = await queryOr500(
-    res,
-    logger,
-    "Error while removing course from timetable: ",
-    async () => {
-      await timetableRepository.manager.transaction(
-        async (transactionalEntityManager) => {
-          await transactionalEntityManager
-            .createQueryBuilder()
-            .relation(Timetable, "sections")
-            .of(timetable)
-            .remove(courseSections);
+  await timetableRepository.manager.transaction(
+    async (transactionalEntityManager) => {
+      await transactionalEntityManager
+        .createQueryBuilder()
+        .relation(Timetable, "sections")
+        .of(timetable)
+        .remove(courseSections);
 
-          await transactionalEntityManager
-            .createQueryBuilder()
-            .update(Timetable)
-            .set({
-              timings: timetable.timings,
-              examTimes: timetable.examTimes,
-              warnings: timetable.warnings,
-            })
-            .where("timetable.id = :id", { id: timetable.id })
-            .execute();
-        },
-      );
-      return true;
+      await transactionalEntityManager
+        .createQueryBuilder()
+        .update(Timetable)
+        .set({
+          timings: timetable.timings,
+          examTimes: timetable.examTimes,
+          warnings: timetable.warnings,
+        })
+        .where("timetable.id = :id", { id: timetable.id })
+        .execute();
     },
   );
-  if (removed === undefined) {
-    return;
-  }
 
   return res.json({
     message: "course removed",

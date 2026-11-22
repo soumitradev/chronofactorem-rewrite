@@ -10,7 +10,6 @@ import {
   decodeTimetableSqidOr404,
   fetchAuthorOrError,
   fetchTimetableOrError,
-  queryOr500,
 } from "./helpers.js";
 
 const dataSchema = z.object({
@@ -22,18 +21,12 @@ const dataSchema = z.object({
 export const copyTimetableValidator = validate(dataSchema);
 
 export const copyTimetable = async (req: Request, res: Response) => {
-  const logger = req.log;
   const dbID = decodeTimetableSqidOr404(req, res);
   if (dbID === null) {
     return;
   }
 
-  const author = await fetchAuthorOrError(
-    req,
-    res,
-    logger,
-    "Error while querying for user: ",
-  );
+  const author = await fetchAuthorOrError(req, res);
   if (!author) {
     return;
   }
@@ -57,10 +50,9 @@ export const copyTimetable = async (req: Request, res: Response) => {
   const lastUpdated: Date = new Date();
   const authorId: string = author.id;
 
-  const copiedTimetable = await fetchTimetableOrError(res, logger, dbID, {
+  const copiedTimetable = await fetchTimetableOrError(res, dbID, {
     joinSections: true,
     notFoundMessage: "timetable to be copied not found",
-    queryErrorLogMessage: "Error while querying for timetable: ",
   });
   if (!copiedTimetable) {
     return;
@@ -76,62 +68,40 @@ export const copyTimetable = async (req: Request, res: Response) => {
   examTimes = copiedTimetable.examTimes;
   warnings = copiedTimetable.warnings;
 
-  const timetableID = await queryOr500(
-    res,
-    logger,
-    "Error while copying timetable: ",
-    async () => {
-      const timetable = await timetableRepository
-        .createQueryBuilder()
-        .insert()
-        .into(Timetable)
-        .values({
-          authorId,
-          name,
-          degrees,
-          private: isPrivate,
-          draft: isDraft,
-          archived: isArchived,
-          acadYear,
-          semester,
-          year,
-          sections,
-          timings,
-          examTimes,
-          warnings,
-          createdAt,
-          lastUpdated,
-        })
-        .execute();
+  const timetable = await timetableRepository
+    .createQueryBuilder()
+    .insert()
+    .into(Timetable)
+    .values({
+      authorId,
+      name,
+      degrees,
+      private: isPrivate,
+      draft: isDraft,
+      archived: isArchived,
+      acadYear,
+      semester,
+      year,
+      sections,
+      timings,
+      examTimes,
+      warnings,
+      createdAt,
+      lastUpdated,
+    })
+    .execute();
 
-      const sectionsCopied = await queryOr500(
-        res,
-        logger,
-        "Error while copying sections into new timetable: ",
-        async () => {
-          for (let i = 0; i < copiedTimetable.sections.length; i++) {
-            const section = copiedTimetable.sections[i];
-            await timetableRepository
-              .createQueryBuilder()
-              .relation(Timetable, "sections")
-              .of(timetable.identifiers[0].id)
-              .add(section);
-          }
-          return true;
-        },
-      );
-      if (sectionsCopied === undefined) {
-        return undefined;
-      }
-
-      return sqids.encode([timetable.identifiers[0].id]);
-    },
-  );
-  if (timetableID === undefined) {
-    return;
+  for (let i = 0; i < copiedTimetable.sections.length; i++) {
+    const section = copiedTimetable.sections[i];
+    await timetableRepository
+      .createQueryBuilder()
+      .relation(Timetable, "sections")
+      .of(timetable.identifiers[0].id)
+      .add(section);
   }
+
   return res.status(201).json({
     message: "Timetable copied successfully",
-    id: timetableID,
+    id: sqids.encode([timetable.identifiers[0].id]),
   });
 };
