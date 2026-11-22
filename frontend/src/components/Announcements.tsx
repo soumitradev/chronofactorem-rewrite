@@ -18,6 +18,7 @@ import { useIsDesktop } from "@/lib/useIsDesktop";
 import { cn } from "@/lib/utils";
 import ReportIssue from "./ReportIssue";
 import { Button } from "./ui/button";
+import { Collapse } from "./ui/collapse";
 import { ToastAction } from "./ui/toast";
 
 type Announcement = z.infer<typeof announcementWithIDType>;
@@ -73,16 +74,9 @@ function AnnouncementGroup({
           </span>
         </span>
       </button>
-      <div
-        id={regionId}
-        inert={!open}
-        className={cn(
-          "grid transition-[grid-template-rows] duration-(--d-2) ease-(--e-out)",
-          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
-        )}
-      >
-        <div className="min-h-0 overflow-hidden">{children}</div>
-      </div>
+      <Collapse id={regionId} open={open}>
+        {children}
+      </Collapse>
     </section>
   );
 }
