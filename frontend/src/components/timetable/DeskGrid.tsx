@@ -14,6 +14,7 @@ import {
   timetableDayNames,
 } from "@/utils/timetableGrid";
 import { EmptyState, emptyTimetableHint } from "./EmptyState";
+import { OpenButton } from "./OpenButton";
 
 const vtStyle = (cell: TimetableCell) =>
   ({ "--vt": blockName(cell) }) as React.CSSProperties;
@@ -412,30 +413,15 @@ export function DeskGrid({
             <Tooltip delayDuration={200}>
               <TooltipTrigger asChild>
                 {edit ? (
-                  <button
-                    type="button"
+                  <OpenButton
+                    cell={cell}
                     disabled={pending || leaving}
-                    onClick={
-                      leaving ? undefined : (event) => onOpen?.(cell, event)
-                    }
-                    onKeyDown={
-                      leaving
-                        ? undefined
-                        : (event) => {
-                            if (
-                              event.key === "Delete" ||
-                              event.key === "Backspace"
-                            ) {
-                              event.preventDefault();
-                              onRemove?.(cell);
-                            }
-                          }
-                    }
-                    aria-description="Press Delete to remove"
-                    className={`cursor-pointer rounded-md text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring disabled:opacity-60 ${padClass(!rows && cell.span === 1, true)}`}
+                    onOpen={onOpen}
+                    onRemove={onRemove}
+                    className={`rounded-md text-left ${padClass(!rows && cell.span === 1, true)}`}
                   >
                     <BlockLines cell={cell} scale rows={rows} remove />
-                  </button>
+                  </OpenButton>
                 ) : (
                   <div className={padClass(!rows && cell.span === 1, true)}>
                     <BlockLines cell={cell} scale rows={rows} />

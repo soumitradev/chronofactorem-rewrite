@@ -10,6 +10,7 @@ import {
 } from "@/utils/timetableGrid";
 import { EmptyState, emptyTimetableHint } from "./EmptyState";
 import { NowLine } from "./NowLine";
+import { OpenButton } from "./OpenButton";
 import { RemoveButton } from "./RemoveButton";
 
 type AgendaProps = {
@@ -176,32 +177,15 @@ export function Agenda({
                       style={named(item.cell).style}
                       className={`${blockClass} ${named(item.cell).className} relative hover:bg-ev-hover`}
                     >
-                      <button
-                        type="button"
+                      <OpenButton
+                        cell={item.cell}
                         disabled={pending || item.cell.presence === "leaving"}
-                        onClick={
-                          item.cell.presence === "leaving"
-                            ? undefined
-                            : (event) => onOpen?.(item.cell, event)
-                        }
-                        onKeyDown={
-                          item.cell.presence === "leaving"
-                            ? undefined
-                            : (event) => {
-                                if (
-                                  event.key === "Delete" ||
-                                  event.key === "Backspace"
-                                ) {
-                                  event.preventDefault();
-                                  onRemove?.(item.cell);
-                                }
-                              }
-                        }
-                        aria-description="Press Delete to remove"
-                        className={`${bodyClass} cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring disabled:opacity-60`}
+                        onOpen={onOpen}
+                        onRemove={onRemove}
+                        className={bodyClass}
                       >
                         <BlockBody cell={item.cell} remove />
-                      </button>
+                      </OpenButton>
                       <RemoveButton
                         cell={item.cell}
                         disabled={pending || item.cell.presence === "leaving"}

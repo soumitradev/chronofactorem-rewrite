@@ -5,6 +5,7 @@ import {
   type TimetableCell,
 } from "@/utils/timetableGrid";
 import { EmptyState, emptyTimetableHint } from "./EmptyState";
+import { OpenButton } from "./OpenButton";
 import { RemoveButton } from "./RemoveButton";
 import { WeekGridFrame } from "./WeekGridFrame";
 
@@ -134,25 +135,15 @@ export function WeekGrid({
             inert={leaving}
             className={`@container ${tileClass} ${nameClass} hover:bg-ev-hover`}
           >
-            <button
-              type="button"
+            <OpenButton
+              cell={cell}
               disabled={pending || leaving}
-              onClick={leaving ? undefined : (event) => onOpen?.(cell, event)}
-              onKeyDown={
-                leaving
-                  ? undefined
-                  : (event) => {
-                      if (event.key === "Delete" || event.key === "Backspace") {
-                        event.preventDefault();
-                        onRemove?.(cell);
-                      }
-                    }
-              }
-              aria-description="Press Delete to remove"
-              className={`${padClass} size-full cursor-pointer rounded-sm @max-[87px]:px-1.5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring disabled:opacity-60`}
+              onOpen={onOpen}
+              onRemove={onRemove}
+              className={`${padClass} size-full rounded-sm @max-[87px]:px-1.5`}
             >
               <TileBody cell={cell} spacer="h-3 w-3" reserve="pr-2.5" />
-            </button>
+            </OpenButton>
             {/* the tile is small, so the ×'s hit area stays at 28px rather
             than taking most of it */}
             <RemoveButton
