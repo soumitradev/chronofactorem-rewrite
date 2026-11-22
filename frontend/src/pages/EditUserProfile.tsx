@@ -1,6 +1,11 @@
 import { createLazyRoute } from "@tanstack/react-router";
-import { getBatchFromEmail, unknownDegree } from "lib";
+import {
+  getBatchFromEmail,
+  unknownDegree,
+  type userWithTimetablesType,
+} from "lib";
 import { useState } from "react";
+import type z from "zod";
 import { BottomBar } from "@/components/BottomBar";
 import { ButtonLabel } from "@/components/ButtonLabel";
 import DegreeDropDown from "@/components/DegreeDropDown";
@@ -12,20 +17,12 @@ import { router } from "../router";
 
 function EditUserProfile() {
   const { data: user, isLoading, isError, error } = useUser();
-  const { mutateOnce: editUser, isPending } = useEditUser();
-
-  const [firstDegree, setFirstDegree] = useState<string | null>(
-    user?.degrees?.[0] ?? null,
-  );
-  const [secondDegree, setSecondDegree] = useState<string | null>(
-    user ? (user.degrees.length > 1 ? user.degrees[1] : null) : null,
-  );
 
   if (isLoading) {
     return <span>Loading...</span>;
   }
 
-  if (isError || user === undefined || firstDegree === null) {
+  if (isError || user === undefined || user.degrees.length === 0) {
     return (
       <ReportIssue
         error={JSON.stringify(
@@ -35,23 +32,39 @@ function EditUserProfile() {
     );
   }
 
+  // mounted once the user loads, so the form starts from their degrees
+  return <ProfileForm user={user} />;
+}
+
+function ProfileForm({
+  user,
+}: {
+  user: z.infer<typeof userWithTimetablesType>;
+}) {
+  const { mutateOnce: editUser, isPending } = useEditUser();
+  const [firstDegree, setFirstDegree] = useState<string | null>(
+    user.degrees[0],
+  );
+  const [secondDegree, setSecondDegree] = useState<string | null>(
+    user.degrees[1] ?? null,
+  );
+
   const batch = getBatchFromEmail(user.email);
 
   const handleSubmit = async () => {
-    if (firstDegree.includes("B") && secondDegree === null) {
+    if (firstDegree === null) return;
+    const dual = firstDegree.includes("B");
+    if (dual && secondDegree === null) {
       toast({
         title: "Select your second degree!",
       });
       return;
     }
 
-    const degrees = firstDegree.includes("B")
-      ? secondDegree !== null
-        ? secondDegree !== "A0"
-          ? [firstDegree, secondDegree]
-          : [firstDegree]
-        : [firstDegree]
-      : [firstDegree];
+    const degrees =
+      dual && secondDegree !== "A0"
+        ? [firstDegree, secondDegree]
+        : [firstDegree];
 
     editUser({ degrees }, { onSuccess: () => router.navigate({ to: "/" }) });
   };
