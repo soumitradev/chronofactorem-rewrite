@@ -5,7 +5,6 @@ import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTimetableState } from "@/context";
 import { useRemoveTimetableCourse } from "@/data-access/hooks/useRemoveTimetableCourse";
 import { haptic } from "@/lib/haptics";
-import { panelForward } from "@/lib/panelTransition";
 import { useTimetableNav } from "@/lib/useTimetableNav";
 import { useWarningsSummary } from "@/lib/useWarningsSummary";
 import { cn } from "@/lib/utils";
@@ -187,7 +186,9 @@ export function CoursesTab({ editable }: { editable: boolean }) {
               pills={pillsFor(course.id)}
               hue={courseHues.get(course.code)}
               onOpen={
-                editable ? panelForward(() => openCourse(course.id)) : undefined
+                editable
+                  ? () => openCourse(course.id, { transition: "panel-forward" })
+                  : undefined
               }
               onRemove={
                 editable
@@ -211,7 +212,11 @@ export function CoursesTab({ editable }: { editable: boolean }) {
                   <CourseRow
                     key={`course:${entry.course.id}`}
                     course={entry.course}
-                    onOpen={panelForward(() => openCourse(entry.course.id))}
+                    onOpen={() =>
+                      openCourse(entry.course.id, {
+                        transition: "panel-forward",
+                      })
+                    }
                   />
                 );
               }

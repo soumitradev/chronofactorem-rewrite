@@ -160,10 +160,9 @@ function EditTimetable() {
         onOpen={(e, event) => {
           if (e?.courseId && e?.type) {
             if (event.detail <= 1) {
-              openCourse(
-                courses.filter((x) => x.code === e?.courseId)[0].id,
-                e?.type as "L" | "P" | "T",
-              );
+              openCourse(courses.filter((x) => x.code === e?.courseId)[0].id, {
+                type: e?.type as "L" | "P" | "T",
+              });
             } else if (event.detail >= 2) {
               e?.id
                 ? sectionAction({ sectionId: e?.id, action: "remove" })

@@ -5,7 +5,6 @@ import type z from "zod";
 import { useTimetableState } from "@/context";
 import { hueStyle } from "@/lib/courseHues";
 import { HapticTap } from "@/lib/haptics";
-import { panelForward } from "@/lib/panelTransition";
 import { titleCase } from "@/lib/titleCase";
 import { useTimetableNav } from "@/lib/useTimetableNav";
 import { cn } from "@/lib/utils";
@@ -216,7 +215,7 @@ function OptionRow({
     <CourseRow
       course={course}
       clashing={clashing}
-      onOpen={panelForward(() => openCourse(course.id))}
+      onOpen={() => openCourse(course.id, { transition: "panel-forward" })}
       className={className}
     />
   );

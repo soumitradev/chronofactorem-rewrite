@@ -1,6 +1,5 @@
 import { ArrowUpRight } from "lucide-react";
 import { useTimetableState } from "@/context";
-import { panelForward } from "@/lib/panelTransition";
 import { titleCase } from "@/lib/titleCase";
 import { useTimetableNav } from "@/lib/useTimetableNav";
 import { useWarningsSummary } from "@/lib/useWarningsSummary";
@@ -51,11 +50,11 @@ export function WarningsList({
   const showNotFound = notFound.length > 0;
   if (!showSections && !showCdcs && !showNotFound) return null;
 
-  const go = (fn: () => unknown) =>
-    panelForward(() => {
-      onNavigate?.();
-      return fn();
-    })();
+  const go = (fn: () => unknown) => {
+    onNavigate?.();
+    fn();
+  };
+  const forward = { transition: "panel-forward" } as const;
 
   return (
     <div className={cn("flex flex-col pb-3 lg:pb-0", className)}>
@@ -75,7 +74,9 @@ export function WarningsList({
                 {courseId && (
                   <Open
                     label={`Open ${code}`}
-                    onClick={() => go(() => openCourse(courseId, type))}
+                    onClick={() =>
+                      go(() => openCourse(courseId, { type, ...forward }))
+                    }
                   />
                 )}
               </div>
@@ -103,7 +104,9 @@ export function WarningsList({
                   label={`Open ${e.code}`}
                   onClick={() =>
                     go(() =>
-                      e.courseId ? openCourse(e.courseId) : showTab("courses"),
+                      e.courseId
+                        ? openCourse(e.courseId, forward)
+                        : showTab("courses", "panel-forward"),
                     )
                   }
                 />
