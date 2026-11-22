@@ -42,7 +42,7 @@ type Props = {
   style?: CSSProperties;
 };
 
-export function formatCardMeta(t: Timetable, now: Date = new Date()): string {
+function formatCardMeta(t: Timetable, now: Date = new Date()): string {
   const parts: string[] = [];
   if (t.year !== 0) parts.push(`${t.year}-${t.semester}`);
   if (!t.degrees.includes(unknownDegree)) parts.push(t.degrees.join(""));

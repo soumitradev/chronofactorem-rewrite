@@ -86,25 +86,12 @@ function DayGroups({ kind }: { kind: ExamKind }) {
   );
 }
 
-const ExamTab = ({ all }: { all?: boolean }) => {
+const ExamTab = () => {
   const {
     state: { timetable },
   } = useTimetableState();
   const { search, setExam } = useTimetableNav();
   if (timetable === undefined) return;
-
-  if (all) {
-    return (
-      <div className="flex flex-col pt-2 pb-6">
-        {OPTIONS.map((o, i) => (
-          <Fragment key={o.value}>
-            <div className={cn(overline, i > 0 && "mt-[22px]")}>{o.label}</div>
-            <DayGroups kind={o.value} />
-          </Fragment>
-        ))}
-      </div>
-    );
-  }
 
   const kind: ExamKind = search.exam ?? "midsem";
   return (

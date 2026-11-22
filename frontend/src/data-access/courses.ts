@@ -32,12 +32,9 @@ const fetchCourse = async (currentCourseID: string) => {
   return response.data;
 };
 
-export const courseByIdQueryOptions = (currentCourseID: string | null) =>
-  queryOptions({
+export const useCourse = (currentCourseID: string | null) =>
+  useQuery({
     queryKey: ["course", currentCourseID],
     queryFn: () => fetchCourse(currentCourseID as string),
     enabled: currentCourseID !== null,
   });
-
-export const useCourse = (currentCourseID: string | null) =>
-  useQuery(courseByIdQueryOptions(currentCourseID));

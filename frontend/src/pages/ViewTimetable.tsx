@@ -35,8 +35,6 @@ function ViewTimetable() {
     return <ReportIssue error={"Error fetching queries"} />;
   }
 
-  const SideBar = <SideMenu isOnEditPage={false} isScreenshotMode={false} />;
-
   return (
     <>
       <TimetablePageShell
@@ -47,7 +45,7 @@ function ViewTimetable() {
             onExport={exportPng}
           />
         }
-        panel={SideBar}
+        panel={<SideMenu isOnEditPage={false} />}
         dock={
           <TimetableDock
             dayCount={dayCount}
