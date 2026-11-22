@@ -1,5 +1,5 @@
 import type { sectionTypeEnum } from "lib";
-import type { QueryRunner } from "typeorm";
+import { type QueryRunner, Raw } from "typeorm";
 import { Course, Section, Timetable } from "./entity/entities.js";
 
 interface ExamJSON {
@@ -15,26 +15,18 @@ interface SectionJSON {
   instructor: string[];
   schedule: ScheduleJSON[];
 }
-interface SectionsJSON {
-  [key: string]: SectionJSON;
-}
 interface CourseJSON {
   units: number;
   course_name: string;
-  sections: SectionsJSON;
+  sections: Record<string, SectionJSON>;
   exams_iso: ExamJSON[];
 }
-interface CoursesJSON {
-  [key: string]: CourseJSON;
-}
-interface MetadataJSON {
-  acadYear: number;
-  semester: number;
-}
-
 interface TimetableJSON {
-  courses: CoursesJSON;
-  metadata: MetadataJSON;
+  courses: Record<string, CourseJSON>;
+  metadata: {
+    acadYear: number;
+    semester: number;
+  };
 }
 
 export const ingestJSON = async (
@@ -44,23 +36,28 @@ export const ingestJSON = async (
   try {
     await queryRunner.startTransaction();
 
-    const starthrTime = process.hrtime();
-    const startTime = starthrTime[0] * 1000 + starthrTime[1] / 1000000;
+    console.time("ingestion took");
 
     const year = timetableJSON.metadata.acadYear;
     const semester = timetableJSON.metadata.semester;
-    const forceOverwrite = process.argv[2] && process.argv[2] === "--overwrite";
+    const forceOverwrite = process.argv[2] === "--overwrite";
     let archivedCoursesUpdateCount = 0;
     let archivedTimetablesUpdateCount = 0;
     let archivedTimetablesDeleteCount = 0;
 
-    const latestCourse = await queryRunner.manager
+    const manager = queryRunner.manager;
+    const latestCourse = await manager
       .createQueryBuilder(Course, "course")
       .orderBy("course.acad_year", "DESC")
       .addOrderBy("course.semester", "DESC")
       .getOne();
 
     if (latestCourse !== null) {
+      const latestSemester = {
+        acadYear: latestCourse.acadYear,
+        semester: latestCourse.semester,
+      };
+
       // Do some basic year and semester checking
       if (latestCourse.acadYear > year) {
         console.error(
@@ -112,15 +109,10 @@ export const ingestJSON = async (
           console.log(
             `deleting timetables from academic year ${latestCourse.acadYear} and semester ${latestCourse.semester}...`,
           );
-          const deletedTimetableResult = await queryRunner.manager
-            .createQueryBuilder()
-            .delete()
-            .from(Timetable)
-            .where("acad_year = :year", { year: latestCourse.acadYear })
-            .andWhere("semester = :semester", {
-              semester: latestCourse.semester,
-            })
-            .execute();
+          const deletedTimetableResult = await manager.delete(
+            Timetable,
+            latestSemester,
+          );
           console.log(
             `deleted ${deletedTimetableResult.affected} timetables from academic year ${latestCourse.acadYear} and semester ${latestCourse.semester}!`,
           );
@@ -128,15 +120,10 @@ export const ingestJSON = async (
           console.log(
             `deleting courses from academic year ${latestCourse.acadYear} and semester ${latestCourse.semester}...`,
           );
-          const deletedCourseResult = await queryRunner.manager
-            .createQueryBuilder()
-            .delete()
-            .from(Course)
-            .where("acad_year = :year", { year: latestCourse.acadYear })
-            .andWhere("semester = :semester", {
-              semester: latestCourse.semester,
-            })
-            .execute();
+          const deletedCourseResult = await manager.delete(
+            Course,
+            latestSemester,
+          );
           console.log(
             `deleted ${deletedCourseResult.affected} courses from academic year ${latestCourse.acadYear} and semester ${latestCourse.semester}!`,
           );
@@ -145,49 +132,34 @@ export const ingestJSON = async (
 
       // Overwriting and checking validity of ingestion is done, so now run normal ingestion
       console.log("marking all old courses as archived...");
-      const archivedCoursesUpdateResult = await queryRunner.manager
-        .createQueryBuilder()
-        .update(Course)
-        .set({ archived: true })
-        .where("acad_year = :year", { year: latestCourse.acadYear })
-        .andWhere("semester = :semester", {
-          semester: latestCourse.semester,
-        })
-        .execute();
+      const archivedCoursesUpdateResult = await manager.update(
+        Course,
+        latestSemester,
+        { archived: true },
+      );
       archivedCoursesUpdateCount = archivedCoursesUpdateResult.affected ?? 0;
       console.log("marked old courses as archived!");
 
       console.log("marking all old non-draft timetables as archived...");
-      const archivedTimetablesUpdateResult = await queryRunner.manager
-        .createQueryBuilder()
-        .update(Timetable)
-        .set({ archived: true })
-        .where("acad_year = :year", { year: latestCourse.acadYear })
-        .andWhere("semester = :semester", {
-          semester: latestCourse.semester,
-        })
-        .andWhere("draft = :draft", {
-          draft: false,
-        })
-        .execute();
+      const archivedTimetablesUpdateResult = await manager.update(
+        Timetable,
+        { ...latestSemester, draft: false },
+        { archived: true },
+      );
       archivedTimetablesUpdateCount =
         archivedTimetablesUpdateResult.affected ?? 0;
       console.log("marked old non-draft timetables as archived!");
 
       console.log("archiving all old draft timetables with no warnings...");
-      const archiveDraftTimetablesUpdateResult = await queryRunner.manager
-        .createQueryBuilder()
-        .update(Timetable)
-        .set({ archived: true, draft: false, private: false })
-        .where("acad_year = :year", { year: latestCourse.acadYear })
-        .andWhere("semester = :semester", {
-          semester: latestCourse.semester,
-        })
-        .andWhere("draft = :draft", {
+      const archiveDraftTimetablesUpdateResult = await manager.update(
+        Timetable,
+        {
+          ...latestSemester,
           draft: true,
-        })
-        .andWhere("CARDINALITY(warnings) = 0")
-        .execute();
+          warnings: Raw((warnings) => `CARDINALITY(${warnings}) = 0`),
+        },
+        { archived: true, draft: false, private: false },
+      );
       const archivedDraftTimetablesUpdateCount =
         archiveDraftTimetablesUpdateResult.affected ?? 0;
       console.log(
@@ -195,19 +167,14 @@ export const ingestJSON = async (
       );
 
       console.log("deleting all old draft timetables with warnings...");
-      const archiveDeletedTimetablesUpdateResult = await queryRunner.manager
-        .createQueryBuilder()
-        .delete()
-        .from(Timetable)
-        .where("acad_year = :year", { year: latestCourse.acadYear })
-        .andWhere("semester = :semester", {
-          semester: latestCourse.semester,
-        })
-        .andWhere("draft = :draft", {
+      const archiveDeletedTimetablesUpdateResult = await manager.delete(
+        Timetable,
+        {
+          ...latestSemester,
           draft: true,
-        })
-        .andWhere("CARDINALITY(warnings) > 0")
-        .execute();
+          warnings: Raw((warnings) => `CARDINALITY(${warnings}) > 0`),
+        },
+      );
       archivedTimetablesDeleteCount =
         archiveDeletedTimetablesUpdateResult.affected ?? 0;
       console.log(
@@ -215,21 +182,7 @@ export const ingestJSON = async (
       );
 
       console.log("checking if all existing courses are archived...");
-      const allCoursesCountResult = await queryRunner.manager
-        .createQueryBuilder()
-        .select()
-        .from(Course, "course")
-        .getCount();
-      const archivedCoursesCountResult = await queryRunner.manager
-        .createQueryBuilder()
-        .select()
-        .from(Course, "course")
-        .where("archived = :archived", { archived: true })
-        .getCount();
-      console.log(
-        `${archivedCoursesCountResult}/${allCoursesCountResult} courses are archived`,
-      );
-      if (archivedCoursesCountResult !== allCoursesCountResult) {
+      if (await manager.existsBy(Course, { archived: false })) {
         console.error(
           "error: not all courses in db are archived; db state inconsistent",
         );
@@ -240,21 +193,7 @@ export const ingestJSON = async (
       console.log("finished checking courses!");
 
       console.log("checking if all existing timetables are archived...");
-      const allTimetablesCountResult = await queryRunner.manager
-        .createQueryBuilder()
-        .select()
-        .from(Timetable, "timetable")
-        .getCount();
-      const archivedTimetablesCountResult = await queryRunner.manager
-        .createQueryBuilder()
-        .select()
-        .from(Timetable, "timetable")
-        .where("archived = :archived", { archived: true })
-        .getCount();
-      console.log(
-        `${archivedTimetablesCountResult}/${allTimetablesCountResult} timetables are archived`,
-      );
-      if (archivedTimetablesCountResult !== allTimetablesCountResult) {
+      if (await manager.existsBy(Timetable, { archived: false })) {
         console.error(
           "error: not all timetables in db are archived; db state inconsistent",
         );
@@ -265,17 +204,15 @@ export const ingestJSON = async (
       console.log("finished checking timetables!");
     }
 
-    const courses = timetableJSON.courses as CoursesJSON;
-
-    const sectionValues = [];
+    const courses = timetableJSON.courses;
 
     console.log("constructing courses...");
-    const courseValues = Object.keys(courses).map((courseCode) => {
-      const midsemTimes = courses[courseCode].exams_iso[0].midsem;
-      const compreTimes = courses[courseCode].exams_iso[0].compre;
+    const courseValues = Object.entries(courses).map(([code, course]) => {
+      const midsemTimes = course.exams_iso[0].midsem;
+      const compreTimes = course.exams_iso[0].compre;
       return {
-        code: courseCode,
-        name: courses[courseCode].course_name,
+        code,
+        name: course.course_name,
         acadYear: year,
         semester: semester,
         archived: false,
@@ -295,7 +232,7 @@ export const ingestJSON = async (
     });
 
     console.log("inserting courses...");
-    const courseInsertResult = await queryRunner.manager
+    const courseInsertResult = await manager
       .createQueryBuilder()
       .insert()
       .into(Course)
@@ -304,43 +241,23 @@ export const ingestJSON = async (
     console.log("courses inserted!");
 
     console.log("constructing sections...");
-    // grab the IDs of courses because we will use them for relations
-    const courseIDs = courseInsertResult.identifiers.map(
-      (idObj) => idObj.id as string,
+    const sectionValues = courseValues.flatMap(({ code }, i) =>
+      Object.entries(courses[code].sections).map(([sectionCode, section]) => ({
+        // insert returns ids in the same order as courseValues
+        courseId: courseInsertResult.identifiers[i].id,
+        instructors: section.instructor,
+        type: sectionCode.slice(0, 1) as sectionTypeEnum,
+        number: Number.parseInt(sectionCode.slice(1), 10),
+        roomTime: section.schedule.flatMap(({ room, days, hours }) =>
+          days.flatMap((day) =>
+            hours.map((hour) => `${code}:${room}:${day}:${hour}`),
+          ),
+        ),
+      })),
     );
-    for (let i = 0; i < courseValues.length; i++) {
-      // for each course, loop over the sections, and add the room-timings to an array
-      for (const courseSectionCode of Object.keys(
-        courses[courseValues[i].code as string].sections,
-      )) {
-        const roomTimes = [];
-        const scheduleObjs =
-          courses[courseValues[i].code as string].sections[courseSectionCode]
-            .schedule;
-        for (let j = 0; j < scheduleObjs.length; j++) {
-          for (let k = 0; k < scheduleObjs[j].days.length; k++) {
-            for (let l = 0; l < scheduleObjs[j].hours.length; l++) {
-              roomTimes.push(
-                `${courseValues[i].code}:${scheduleObjs[j].room}:${scheduleObjs[j].days[k]}:${scheduleObjs[j].hours[l]}`,
-              );
-            }
-          }
-        }
-        // push the section to an array, so we can insert all sections at once
-        sectionValues.push({
-          courseId: courseIDs[i],
-          instructors:
-            courses[courseValues[i].code as string].sections[courseSectionCode]
-              .instructor,
-          type: courseSectionCode.slice(0, 1) as sectionTypeEnum,
-          number: Number.parseInt(courseSectionCode.slice(1), 10),
-          roomTime: roomTimes,
-        });
-      }
-    }
 
     console.log("inserting sections...");
-    const sectionInsertResult = await queryRunner.manager
+    const sectionInsertResult = await manager
       .createQueryBuilder()
       .insert()
       .into(Section)
@@ -358,11 +275,7 @@ export const ingestJSON = async (
     );
     console.log(`courses inserted: ${courseInsertResult.identifiers.length}`);
     console.log(`sections inserted: ${sectionInsertResult.identifiers.length}`);
-    const endhrTime = process.hrtime();
-    const endTime = endhrTime[0] * 1000 + endhrTime[1] / 1000000;
-    console.log(
-      `Ingestion took ${Math.round((endTime - startTime) * 1000) / 1000}ms`,
-    );
+    console.timeEnd("ingestion took");
   } catch (err) {
     // since we have errors let's rollback changes we made
     await queryRunner.rollbackTransaction();
