@@ -24,6 +24,7 @@ import {
   markClashLanding,
   useClashLanding,
 } from "./ClashPills";
+import { group } from "./listStyles";
 import { Badge } from "./ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Roll } from "./ui/roll";
@@ -39,8 +40,7 @@ const typeNames: Record<SectionKind, string> = {
   T: "Tutorial",
 };
 
-const group =
-  "mx-4 mt-2.5 mb-6 lg:mx-0 rounded-xl border border-line bg-surface [&>*+*]:border-t [&>*+*]:border-line [&>:first-child]:rounded-t-[calc(var(--radius-xl)-1px)] [&>:last-child]:rounded-b-[calc(var(--radius-xl)-1px)]";
+const sectionGroup = cn(group, "mt-2.5 mb-6");
 
 const rowGrid = "grid grid-cols-[40px_1fr_auto] gap-x-2.5 px-3.5 py-[13px]";
 
@@ -258,7 +258,7 @@ const CourseDetailsMenu = ({
       }));
 
   const renderList = (type: SectionKind, current: boolean) => (
-    <div className={cn(group, fadeIn.className)}>
+    <div className={cn(sectionGroup, fadeIn.className)}>
       {sectionsOf(type).map(({ section, clashing }) => {
         if (clashing.length > 0) {
           return (
@@ -448,7 +448,7 @@ const CourseDetailsMenu = ({
         {...swipe}
       >
         {course === undefined ? (
-          <div className={group}>
+          <div className={sectionGroup}>
             {[0, 1, 2, 3].map((i) => (
               <div key={i} className="h-16 p-3">
                 <Skeleton className="h-full w-full" />

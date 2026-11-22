@@ -5,12 +5,9 @@ import { formatDayHeading, formatRange } from "@/lib/formatTime";
 import { titleCase } from "@/lib/titleCase";
 import { useTimetableNav } from "@/lib/useTimetableNav";
 import { cn } from "@/lib/utils";
+import { group, overline } from "./listStyles";
 
 type ExamKind = "midsem" | "compre";
-
-const overline = "px-4 lg:px-0 text-[13px] font-medium text-ink-muted";
-const group =
-  "mx-4 mt-2 lg:mx-0 rounded-xl border border-line bg-surface [&>*+*]:border-t [&>*+*]:border-line [&>:first-child]:rounded-t-[calc(var(--radius-xl)-1px)] [&>:last-child]:rounded-b-[calc(var(--radius-xl)-1px)]";
 
 const OPTIONS: { value: ExamKind; label: string }[] = [
   { value: "midsem", label: "Midsems" },
