@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { hueStyle } from "@/lib/courseHues";
+import { formatSlotEnd, formatSlotStart } from "@/lib/formatTime";
 import { titleCase } from "@/lib/titleCase";
-import { formatClock, formatSlotEnd } from "@/utils/timeFormat";
 import {
   blockName,
   buildAgenda,
@@ -151,7 +151,7 @@ export function Agenda({
               <div className="min-h-0 overflow-hidden">
                 <div className="mb-1.5 grid grid-cols-[64px_1fr] gap-3">
                   <div className="col-start-2 pt-1 pb-2.5 pl-0.5 font-mono text-xs text-ink-faint">
-                    {`Free · ${formatClock(item.from)} – ${formatClock(item.to)}`}
+                    {`Free · ${formatSlotStart(item.from)} – ${formatSlotStart(item.to)}`}
                   </div>
                 </div>
               </div>
@@ -162,7 +162,7 @@ export function Agenda({
                 <div className="relative mb-1.5 grid grid-cols-[64px_1fr] gap-3">
                   <div className="pt-2.5 text-right font-mono">
                     <div className="whitespace-nowrap text-xs font-medium">
-                      {formatClock(item.cell.hour)}
+                      {formatSlotStart(item.cell.hour)}
                     </div>
                     <div className="whitespace-nowrap text-xs text-ink-faint">
                       {formatSlotEnd(item.cell.hour, item.cell.span)}

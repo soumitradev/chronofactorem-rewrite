@@ -1,10 +1,10 @@
 import { useSearch } from "@tanstack/react-router";
 import { Columns3, Rows3 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatAxisHour } from "@/lib/formatTime";
 import { skeletonRef } from "@/lib/skeletonFade";
 import type { TimetableSearch } from "@/lib/timetableSearch";
 import { useIsDesktop } from "@/lib/useIsDesktop";
-import { formatAxisHour } from "@/utils/timeFormat";
 import { defaultDay, timetableDayNames } from "@/utils/timetableGrid";
 
 const ref = skeletonRef("timetable");

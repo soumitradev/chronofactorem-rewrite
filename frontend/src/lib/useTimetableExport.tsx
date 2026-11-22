@@ -5,9 +5,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { toast } from "@/components/ui/use-toast";
 import { useTimetableState } from "@/context";
 import { hueStyle } from "@/lib/courseHues";
+import { formatExam } from "@/lib/formatTime";
 import { haptic } from "@/lib/haptics";
 import { titleCase } from "@/lib/titleCase";
-import { formatExamRange } from "@/utils/timeFormat";
 import { timetableMeta } from "@/utils/timetable";
 import { useOrientation } from "./useOrientation";
 
@@ -110,7 +110,7 @@ function ExamList({
                 </div>
               </div>
               <span className="shrink-0 font-mono text-xs font-medium tabular-nums text-ink">
-                {formatExamRange(new Date(exam.start), new Date(exam.end))}
+                {formatExam(exam.start, exam.end)}
               </span>
             </li>
           );

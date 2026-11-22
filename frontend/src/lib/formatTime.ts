@@ -19,11 +19,31 @@ const headingFormat = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
 });
+const axisFormat = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric",
+  hour12: true,
+});
 
 export const formatClock = (d: Date): string => clockFormat.format(d);
 
 export const formatRange = (start: Date, end: Date): string =>
   `${formatClock(start)} – ${formatClock(end)}`;
+
+const gridStartHour = 8;
+
+// grid hours are 0-based, so hour 0 is the grid's first hour
+const gridTime = (hour: number, minute = 0) =>
+  new Date(2000, 0, 1, gridStartHour + hour, minute);
+
+export const formatAxisHour = (hour: number): string =>
+  axisFormat.format(gridTime(hour));
+
+export const formatSlotStart = (hour: number): string =>
+  formatClock(gridTime(hour));
+
+// a run of `span` slots from `hour` ends at (hour + span - 1):50
+export const formatSlotEnd = (hour: number, span: number): string =>
+  formatClock(gridTime(hour + span - 1, 50));
 
 const sameDay = (a: Date, b: Date) =>
   a.getFullYear() === b.getFullYear() &&
@@ -82,9 +102,6 @@ export const formatDayHeading = (d: Date): string => headingFormat.format(d);
 
 const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-const hourClock = (hour: number, minute: number) =>
-  formatClock(new Date(2000, 0, 1, hour, minute));
-
 /**
  * Turns `CODE:ROOM:DAY:HOUR` entries (hour 1-based, 1 = 8 AM) into lines such
  * as `Mon, Wed, Fri · 9:00 AM – 9:50 AM · F102`.
@@ -139,6 +156,6 @@ export function summarizeRoomTimes(roomTime: string[]): string[] {
     .sort((a, b) => a.days[0] - b.days[0] || a.from - b.from)
     .map(
       (item) =>
-        `${item.days.map((d) => dayLabels[d]).join(", ")} · ${hourClock(7 + item.from, 0)} – ${hourClock(7 + item.to, 50)} · ${item.room}`,
+        `${item.days.map((d) => dayLabels[d]).join(", ")} · ${formatSlotStart(item.from - 1)} – ${formatSlotEnd(item.from - 1, item.to - item.from + 1)} · ${item.room}`,
     );
 }

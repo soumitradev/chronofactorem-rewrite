@@ -1,5 +1,5 @@
 import { hueStyle } from "@/lib/courseHues";
-import { formatAxisHour } from "@/utils/timeFormat";
+import { formatAxisHour } from "@/lib/formatTime";
 import {
   blockName,
   splitCode,

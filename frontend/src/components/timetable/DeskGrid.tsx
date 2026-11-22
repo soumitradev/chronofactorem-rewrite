@@ -6,8 +6,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { hueStyle } from "@/lib/courseHues";
+import { formatAxisHour } from "@/lib/formatTime";
 import { titleCase as nameCase } from "@/lib/titleCase";
-import { formatAxisHour } from "@/utils/timeFormat";
 import {
   blockName,
   type TimetableCell,
