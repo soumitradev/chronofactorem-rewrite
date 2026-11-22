@@ -1,10 +1,5 @@
-// @ts-check
 import { z } from "zod";
 
-/**
- * Specify your server-side environment variables schema here.
- * This way you can ensure the app isn't built with invalid env vars.
- */
 export const serverSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]),
   POSTGRES_USER: z.string().min(1),
@@ -12,13 +7,10 @@ export const serverSchema = z.object({
   POSTGRES_DB: z.string().min(1),
   PGPORT: z.coerce.number().prefault(5432),
   DB_HOST: z.string().min(1),
-  BACKEND_URL: z.url().min(1),
-  FRONTEND_URL: z.url().min(1),
+  BACKEND_URL: z.url(),
+  FRONTEND_URL: z.url(),
   BACKEND_PORT: z.coerce.number().prefault(3000),
-  LOGTO_ENDPOINT: z
-    .url()
-    .min(1)
-    .transform((url) => url.replace(/\/+$/, "")),
+  LOGTO_ENDPOINT: z.url().transform((url) => url.replace(/\/+$/, "")),
   LOGTO_APP_ID: z.string().min(1),
   LOGTO_APP_SECRET: z.string().min(1),
   JWT_PRIVATE_KEY: z.string().min(1),
