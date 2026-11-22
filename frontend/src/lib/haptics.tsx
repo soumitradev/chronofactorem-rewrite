@@ -22,10 +22,7 @@ export function haptic(kind: HapticKind) {
   }
 }
 
-const switchTick =
-  typeof window !== "undefined" &&
-  typeof navigator.vibrate !== "function" &&
-  coarse();
+const switchTick = typeof navigator.vibrate !== "function" && coarse();
 
 // iOS has no vibrate, but Safari ticks when a real tap toggles a switch input,
 // even through its label. Put this last inside a `relative` button.
