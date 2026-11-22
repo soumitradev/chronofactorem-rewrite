@@ -64,9 +64,6 @@ export const namedYearType = (name?: string) =>
     .int({
       message: addNameToString("year is an invalid year", name),
     })
-    .positive({
-      message: addNameToString("year is an invalid year", name),
-    })
     .lte(3000)
     .gte(1900);
 export const yearType = namedYearType();
@@ -89,9 +86,6 @@ export const batchType = namedBatchType();
 export const namedCollegeYearType = (name?: string) =>
   z
     .int({
-      message: addNameToString("college year is an invalid year", name),
-    })
-    .positive({
       message: addNameToString("college year is an invalid year", name),
     })
     .lte(6, {
@@ -154,7 +148,7 @@ export const namedShortBITSIDType = (name?: string) =>
           ? addNameToString("BITS ID is required", name)
           : addNameToString("BITS ID is not a string", name),
     })
-    .regex(new RegExp(/^f20[0-9]{6}$/), {
+    .regex(/^f20[0-9]{6}$/, {
       message: addNameToString("BITS ID is invalid", name),
     });
 export const shortBITSIDType = namedShortBITSIDType();

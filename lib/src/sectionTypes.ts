@@ -22,7 +22,7 @@ export type sectionTypeEnum = z.infer<typeof sectionTypeZodEnum>;
 export type sectionTypeList = z.infer<typeof sectionTypeZodList>;
 
 export const isAValidSectionType = (
-  degree: string,
-): degree is sectionTypeEnum => {
-  return approvedSectionTypeList.includes(degree as sectionTypeEnum);
+  sectionType: string,
+): sectionType is sectionTypeEnum => {
+  return approvedSectionTypeList.includes(sectionType as sectionTypeEnum);
 };
