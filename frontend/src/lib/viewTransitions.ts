@@ -23,16 +23,6 @@ export const panelMoved = (a: TimetableSearch, b: TimetableSearch): boolean => {
   );
 };
 
-let sheetClosePending = false;
-
-// the next pop closes the sheet, so it mustn't slide the panel under the sheet's exit
-export function markSheetClosing(): void {
-  sheetClosePending = true;
-  setTimeout(() => {
-    sheetClosePending = false;
-  }, 1000);
-}
-
 // the router default, so only route changes and history pops land here; a
 // different timetable (a fresh copy) replaces the page whole instead of morphing
 export function routeTransitionTypes(info: {
@@ -44,10 +34,6 @@ export function routeTransitionTypes(info: {
   if (prefersReducedMotion()) return false;
   const back = tsrIndex(info.toLocation) < tsrIndex(info.fromLocation);
   if (!info.pathChanged) {
-    if (sheetClosePending) {
-      sheetClosePending = false;
-      return false;
-    }
     if (
       !panelMoved(
         info.fromLocation.search as TimetableSearch,

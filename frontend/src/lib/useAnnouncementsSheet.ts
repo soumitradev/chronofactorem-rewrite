@@ -2,8 +2,7 @@ import { useNavigate, useRouter, useSearch } from "@tanstack/react-router";
 import { useCallback, useMemo } from "react";
 import type { RootSearch } from "./timetableSearch";
 
-// a root-level param, so it opens on any page and back closes it; closing pops
-// our own entry, otherwise (deep link, reload) drops the param in place
+// a root-level param, so it opens on any page and back closes it
 export function useAnnouncementsSheet() {
   const search = useSearch({ strict: false }) as RootSearch;
   const navigate = useNavigate();
@@ -15,25 +14,15 @@ export function useAnnouncementsSheet() {
     navigate({
       to: ".",
       search: (p: RootSearch) => ({ ...p, sheet: "announcements" }),
-      state: { chronoNav: true, rootSheet: "announcements" },
+      state: { chronoNav: true },
       resetScroll: false,
     });
   }, [navigate, router]);
 
   const hide = useCallback(() => {
-    const loc = router.state.location;
-    if (loc.search.sheet !== "announcements") return;
-    if (loc.state.rootSheet === "announcements") {
+    if (router.state.location.search.sheet === "announcements")
       router.history.back();
-      return;
-    }
-    navigate({
-      to: ".",
-      search: ({ sheet: _s, ...rest }: RootSearch) => rest,
-      replace: true,
-      resetScroll: false,
-    });
-  }, [navigate, router]);
+  }, [router]);
 
   return useMemo(() => ({ open, show, hide }), [open, show, hide]);
 }
