@@ -47,6 +47,18 @@ if (!/^[a-z0-9_]*synthetics[a-z0-9_]*$/.test(DB_NAME)) {
   );
   process.exit(1);
 }
+// SHARD=i/n shoots every nth screenshot starting at the ith, so ci can split
+// the run across machines
+const rawShard = process.env.SHARD ?? "1/1";
+const shardMatch = /^([1-9]\d*)\/([1-9]\d*)$/.exec(rawShard);
+const shard = Number(shardMatch?.[1]);
+const shards = Number(shardMatch?.[2]);
+if (!shardMatch || shard > shards) {
+  console.error(
+    `SHARD=${rawShard}: expected i/n with positive integers and 1 <= i <= n`,
+  );
+  process.exit(1);
+}
 const server = {
   host: process.env.DB_HOST ?? "localhost",
   port: Number(process.env.PGPORT ?? 5432),
@@ -207,9 +219,9 @@ const sideBySide = async (shots: Buffer[], path: string) => {
   const sizes = await Promise.all(shots.map((shot) => sharp(shot).metadata()));
   let left = 0;
   const placed = shots.map((input, i) => {
-    const at = { input, left, top: 0 };
+    const tile = { input, left, top: 0 };
     left += sizes[i].width + GAP;
-    return at;
+    return tile;
   });
   mkdirSync(dirname(path), { recursive: true });
   await sharp({
@@ -353,10 +365,6 @@ const shoot = async (
   });
   rmSync(outDir, { recursive: true, force: true });
 
-  const variants = Object.entries(DEVICES).map(([device, options]) => ({
-    device,
-    options,
-  }));
   const jobs = synthetics.flatMap((synthetic) => {
     const url = synthetic.url.replace(/\{([\w-]+)\}/g, (_, key) => {
       if (!timetables[key]) {
@@ -364,15 +372,17 @@ const shoot = async (
       }
       return timetables[key];
     });
-    // `as` is a scenario user, or the email of someone who hasn't signed up
     const user =
       synthetic.as &&
       (users[synthetic.as] ?? { email: synthetic.as, name: "New Student" });
-    return variants.map((variant) => ({ synthetic, url, user, ...variant }));
+    return Object.entries(DEVICES).map(([device, options]) => ({
+      synthetic,
+      url,
+      user,
+      device,
+      options,
+    }));
   });
-  // SHARD=i/n shoots every nth screenshot starting at the ith, so ci can split
-  // the run across machines
-  const [shard, shards] = (process.env.SHARD ?? "1/1").split("/").map(Number);
   const mine = jobs.filter((_, i) => i % shards === shard - 1);
 
   const run = async ({
@@ -392,7 +402,6 @@ const shoot = async (
       reducedMotion: "reduce",
     });
     await context.clock.setFixedTime(NOW);
-    // seeded Math.random
     await context.addInitScript(() => {
       let seed = 1;
       Math.random = () => {

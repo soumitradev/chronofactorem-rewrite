@@ -36,12 +36,14 @@ export const changesBetween = async (
   beforePng: Buffer,
   afterPng: Buffer,
 ): Promise<Change[]> => {
-  const [a, b] = await Promise.all([beforePng, afterPng].map(pixelsOf));
-  const width = Math.max(a.width, b.width);
-  const height = Math.max(a.height, b.height);
+  const [before, after] = await Promise.all(
+    [beforePng, afterPng].map(pixelsOf),
+  );
+  const width = Math.max(before.width, after.width);
+  const height = Math.max(before.height, after.height);
   // outside the smaller screenshot counts as changed
-  const at = (img: typeof a, x: number, y: number) =>
-    x < img.width && y < img.height ? img.px[y * img.width + x] : -1;
+  const pixelAt = (image: typeof before, x: number, y: number) =>
+    x < image.width && y < image.height ? image.px[y * image.width + x] : -1;
 
   const columns = Math.ceil(width / CELL);
   const rows = Math.ceil(height / CELL);
@@ -49,13 +51,12 @@ export const changesBetween = async (
   const cells = new Int32Array(columns * rows);
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      if (at(a, x, y) === at(b, x, y)) continue;
+      if (pixelAt(before, x, y) === pixelAt(after, x, y)) continue;
       changed[y * width + x] = 1;
       cells[Math.floor(y / CELL) * columns + Math.floor(x / CELL)] = -1;
     }
   }
 
-  // label the changed cells, each group of nearby ones with its own number
   let groups = 0;
   for (let start = 0; start < cells.length; start++) {
     if (cells[start] !== -1) continue;
@@ -63,12 +64,16 @@ export const changesBetween = async (
     cells[start] = group;
     const stack = [start];
     while (stack.length) {
-      const cell = stack.pop() as number;
+      const cell = stack.pop();
+      if (cell === undefined) break;
       const cx = cell % columns;
       const cy = (cell - cx) / columns;
-      for (let ny = cy - REACH; ny <= cy + REACH; ny++) {
-        for (let nx = cx - REACH; nx <= cx + REACH; nx++) {
-          if (nx < 0 || ny < 0 || nx >= columns || ny >= rows) continue;
+      const minY = Math.max(0, cy - REACH);
+      const maxY = Math.min(rows - 1, cy + REACH);
+      const minX = Math.max(0, cx - REACH);
+      const maxX = Math.min(columns - 1, cx + REACH);
+      for (let ny = minY; ny <= maxY; ny++) {
+        for (let nx = minX; nx <= maxX; nx++) {
           const next = ny * columns + nx;
           if (cells[next] !== -1) continue;
           cells[next] = group;
@@ -98,16 +103,24 @@ export const changesBetween = async (
     }
   }
   return boxes.map(({ x0, y0, x1, y1, pixels }) => {
-    const w = x1 - x0 + 1;
-    const h = y1 - y0 + 1;
-    const crop = (img: typeof a) => {
-      const out = new Int32Array(w * h);
-      for (let y = 0; y < h; y++) {
-        for (let x = 0; x < w; x++) out[y * w + x] = at(img, x0 + x, y0 + y);
+    const boxWidth = x1 - x0 + 1;
+    const boxHeight = y1 - y0 + 1;
+    const crop = (image: typeof before) => {
+      const out = new Int32Array(boxWidth * boxHeight);
+      for (let y = 0; y < boxHeight; y++) {
+        for (let x = 0; x < boxWidth; x++) {
+          out[y * boxWidth + x] = pixelAt(image, x0 + x, y0 + y);
+        }
       }
       return out;
     };
-    return { width: w, height: h, pixels, before: crop(a), after: crop(b) };
+    return {
+      width: boxWidth,
+      height: boxHeight,
+      pixels,
+      before: crop(before),
+      after: crop(after),
+    };
   });
 };
 
@@ -116,29 +129,29 @@ export const changesBetween = async (
 // right edge, since text next to a changed part can push it along
 const SIZE_SLACK = 2;
 const ALIKE = 0.9;
-const alike = (p: Change, q: Change) => {
+const alike = (first: Change, second: Change) => {
   if (
-    Math.abs(p.width - q.width) > SIZE_SLACK ||
-    Math.abs(p.height - q.height) > SIZE_SLACK
+    Math.abs(first.width - second.width) > SIZE_SLACK ||
+    Math.abs(first.height - second.height) > SIZE_SLACK
   ) {
     return false;
   }
-  const w = Math.min(p.width, q.width);
-  const h = Math.min(p.height, q.height);
-  for (const [px, qx] of [
+  const width = Math.min(first.width, second.width);
+  const height = Math.min(first.height, second.height);
+  for (const [firstX, secondX] of [
     [0, 0],
-    [p.width - w, q.width - w],
+    [first.width - width, second.width - width],
   ]) {
     let same = 0;
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const i = y * p.width + px + x;
-        const j = y * q.width + qx + x;
-        if (p.before[i] === q.before[j]) same++;
-        if (p.after[i] === q.after[j]) same++;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const firstIndex = y * first.width + firstX + x;
+        const secondIndex = y * second.width + secondX + x;
+        if (first.before[firstIndex] === second.before[secondIndex]) same++;
+        if (first.after[firstIndex] === second.after[secondIndex]) same++;
       }
     }
-    if (same >= ALIKE * 2 * w * h) return true;
+    if (same >= ALIKE * 2 * width * height) return true;
   }
   return false;
 };
@@ -165,10 +178,10 @@ export const groupRepeats = <T>(
     const counts = left.map(({ changes }) => changes.filter(unseen).length);
     const most = Math.max(0, ...counts);
     if (!most) break;
-    shown.push(left[counts.indexOf(most)]);
-    left = left.filter((_, i) => i !== counts.indexOf(most));
+    const best = counts.indexOf(most);
+    shown.push(left[best]);
+    left = left.filter((_, i) => i !== best);
   }
-  // each repeat next to the shown screenshot with most of its changes
   const repeats = left.map(({ item, changes }) => {
     const shared = shown.map(
       (screenshot) =>
