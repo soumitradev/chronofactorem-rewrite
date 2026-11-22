@@ -11,7 +11,7 @@ import {
 import { Sheet, SheetContent, SheetHeader } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
-import useAnnouncements from "@/data-access/hooks/useAnnouncements";
+import { useAnnouncements } from "@/data-access/user";
 import { useSkeletonFadeIn } from "@/lib/skeletonFade";
 import { useAnnouncementsSheet } from "@/lib/useAnnouncementsSheet";
 import { useIsDesktop } from "@/lib/useIsDesktop";

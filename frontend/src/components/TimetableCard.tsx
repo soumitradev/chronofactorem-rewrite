@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import useEditTimetable from "@/data-access/hooks/useEditTimetable";
+import { useEditTimetable } from "@/data-access/timetables";
 import { preloadOnIntent } from "@/lib/preloadOnIntent";
 import { TIMETABLE_GRID_VT, TIMETABLE_TITLE_VT } from "@/lib/sharedTransition";
 import { cn } from "@/lib/utils";

@@ -4,11 +4,11 @@ import { Check, ChevronLeft, HelpCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type z from "zod";
 import { useTimetableState } from "@/context";
-import { useRemoveTimetableCourse } from "@/data-access/hooks/useRemoveTimetableCourse";
 import {
   useAddRemoveTimetableSection,
+  useRemoveTimetableCourse,
   useSwapTimetableSections,
-} from "@/data-access/hooks/useTimetableSectionAction";
+} from "@/data-access/timetables";
 import { formatExam, summarizeRoomTimes } from "@/lib/formatTime";
 import { HapticTap, haptic } from "@/lib/haptics";
 import { useSkeletonFadeIn } from "@/lib/skeletonFade";

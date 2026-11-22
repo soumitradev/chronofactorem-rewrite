@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetHeader } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import WarningsList from "@/components/WarningsList";
 import { useTimetableState } from "@/context";
-import useCourse from "@/data-access/hooks/useCourse";
+import { useCourse } from "@/data-access/courses";
 import { useSkeletonFadeIn } from "@/lib/skeletonFade";
 import { titleCase } from "@/lib/titleCase";
 import { useIsDesktop } from "@/lib/useIsDesktop";

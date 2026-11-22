@@ -5,7 +5,7 @@ import { CruxMark } from "@/components/CruxMark";
 import DegreeDropDown from "@/components/DegreeDropDown";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import useCreateUser from "@/data-access/hooks/useCreateUser";
+import { useCreateUser } from "@/data-access/user";
 import { router } from "../router";
 
 function GetDegrees() {

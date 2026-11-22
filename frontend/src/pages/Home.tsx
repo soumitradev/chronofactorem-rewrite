@@ -20,8 +20,8 @@ import {
   overlineClass,
 } from "@/components/HomeSkeleton";
 import ReportIssue from "@/components/ReportIssue";
-import useCreateTimetable from "@/data-access/hooks/useCreateTimetable";
-import useUser from "@/data-access/hooks/useUser";
+import { useCreateTimetable } from "@/data-access/timetables";
+import { useUser } from "@/data-access/user";
 import { preloadEditorOnIntent } from "@/lib/preloadOnIntent";
 import {
   getSharedTimetable,
