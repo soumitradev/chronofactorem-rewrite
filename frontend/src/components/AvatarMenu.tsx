@@ -15,48 +15,28 @@ import { courseHues, hueStyle } from "@/lib/courseHues";
 
 const PREVIEW_CODES = ["CS F213", "MATH F211", "CS F215", "ECON F211"];
 
-type Theme = "light" | "dark" | "system";
+const THEMES = [
+  { value: "light", name: "Light", Icon: Sun },
+  { value: "dark", name: "Dark", Icon: Moon },
+  { value: "system", name: "Auto", Icon: Monitor },
+] as const;
 
-const THEMES: Theme[] = ["light", "dark", "system"];
+type Theme = (typeof THEMES)[number]["value"];
 
-const THEME_NAMES: Record<Theme, string> = {
-  light: "Light",
-  dark: "Dark",
-  system: "Auto",
-};
-
-const OPTIONS = [
-  {
-    value: "light" as const,
-    label: (
-      <>
-        <Sun className="size-3.5" />
-        Light
-      </>
-    ),
-  },
-  {
-    value: "dark" as const,
-    label: (
-      <>
-        <Moon className="size-3.5" />
-        Dark
-      </>
-    ),
-  },
-  {
-    value: "system" as const,
-    label: (
-      <>
-        <Monitor className="size-3.5" />
-        Auto
-      </>
-    ),
-  },
-];
+const OPTIONS = THEMES.map(({ value, name, Icon }) => ({
+  value,
+  label: (
+    <>
+      <Icon className="size-3.5" />
+      {name}
+    </>
+  ),
+}));
 
 export function AvatarMenu({ user }: { user: { name: string } }) {
   const { theme, setTheme, colorSeed, shuffleColors } = useTheme();
+  const themeIndex = THEMES.findIndex((t) => t.value === theme);
+  const themeName = THEMES[themeIndex]?.name;
   const previewHues = [...courseHues(PREVIEW_CODES, colorSeed).values()];
   const pointer = useRef<{ x: number; y: number } | null>(null);
 
@@ -95,7 +75,7 @@ export function AvatarMenu({ user }: { user: { name: string } }) {
         <DropdownMenuItem
           className="my-1 p-0 focus:bg-transparent"
           onSelect={(e) => e.preventDefault()}
-          aria-label={`Theme: ${THEME_NAMES[theme]}`}
+          aria-label={`Theme: ${themeName}`}
           onKeyDown={(e) => {
             if (e.target !== e.currentTarget) {
               // the Segmented handles these itself; keep Radix from also
@@ -110,8 +90,7 @@ export function AvatarMenu({ user }: { user: { name: string } }) {
             if (!step) return;
             e.preventDefault();
             e.stopPropagation();
-            const i = THEMES.indexOf(theme);
-            change(THEMES[(i + step + 3) % 3], e.currentTarget);
+            change(THEMES[(themeIndex + step + 3) % 3].value, e.currentTarget);
           }}
           onPointerDownCapture={(e) => {
             pointer.current = { x: e.clientX, y: e.clientY };
@@ -129,7 +108,7 @@ export function AvatarMenu({ user }: { user: { name: string } }) {
             }}
           />
           <span role="status" className="sr-only">
-            {`Theme: ${THEME_NAMES[theme]}`}
+            {`Theme: ${themeName}`}
           </span>
         </DropdownMenuItem>
         <DropdownMenuItem
