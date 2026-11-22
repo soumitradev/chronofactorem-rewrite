@@ -348,16 +348,7 @@
   }
 
   /* render toasts above everything */
-  html:active-view-transition-type(
-    forward,
-    back,
-    panel-forward,
-    panel-back,
-    view-morph,
-    orient,
-    day-next,
-    day-prev
-  ) .toast-viewport {
+  html:active-view-transition .toast-viewport {
     view-transition-name: app-toasts;
   }
   ::view-transition-group(app-toasts) {
