@@ -1,11 +1,11 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { AxiosError } from "axios";
 import { Info, Plus } from "lucide-react";
-import { useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import { useCreateTimetable } from "@/data-access/timetables";
 import { useUser } from "@/data-access/user";
 import { preloadEditorOnIntent } from "@/lib/preloadOnIntent";
+import { useIsDesktop } from "@/lib/useIsDesktop";
 import { router } from "../router";
 import Announcements from "./Announcements";
 import { AvatarMenu } from "./AvatarMenu";
@@ -14,22 +14,9 @@ import { ThemeButton } from "./ThemeButton";
 
 type User = NonNullable<ReturnType<typeof useUser>["data"]>;
 
-const desktopQuery = "(min-width: 1024px)";
-
-// Only one bar is mounted: two copies would double the announcement fetch
-// and its "new announcements" toast.
-function useIsDesktop() {
-  return useSyncExternalStore(
-    (notify) => {
-      const media = window.matchMedia(desktopQuery);
-      media.addEventListener("change", notify);
-      return () => media.removeEventListener("change", notify);
-    },
-    () => window.matchMedia(desktopQuery).matches,
-  );
-}
-
 export function NavBar() {
+  // only one bar is mounted: two would double the announcement fetch and its
+  // "new announcements" toast
   const isDesktop = useIsDesktop();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isEditPage =
@@ -75,42 +62,57 @@ export function NavBar() {
   // without the parts that need authentication
   const props = {
     user,
-    pathname,
+    showCreate: !!user && !isEditPage,
     isCreating,
     create,
     showLogin: !user && isUnauthenticated,
   };
-  return isDesktop ? (
-    <DesktopNav {...props} showCreate={!!user && !isEditPage} />
-  ) : (
-    <AppBar {...props} showCreate={!!user && !isEditPage} />
-  );
+  return isDesktop ? <DesktopNav {...props} /> : <AppBar {...props} />;
 }
 
 type BarProps = {
   user: User | undefined;
-  pathname: string;
   showCreate: boolean;
   isCreating: boolean;
   create: () => void;
   showLogin: boolean;
 };
 
-const aboutIcon = (
-  <Button variant="quiet" size="icon" aria-label="About" asChild>
-    <Link to="/about">
-      <Info />
-    </Link>
-  </Button>
-);
+function NavActions({
+  user,
+  showCreate,
+  isCreating,
+  create,
+  showLogin,
+  createButton,
+}: BarProps & {
+  createButton: (props: {
+    disabled: boolean;
+    onClick: () => void;
+  }) => React.ReactNode;
+}) {
+  if (!user) {
+    return (
+      <>
+        <ThemeButton />
+        {showLogin && (
+          <Button variant="quiet" size="sm" asChild>
+            <Link to="/login">Login</Link>
+          </Button>
+        )}
+      </>
+    );
+  }
+  return (
+    <>
+      {showCreate && createButton({ disabled: isCreating, onClick: create })}
+      <Announcements />
+      <AvatarMenu user={user} />
+    </>
+  );
+}
 
-const loginLink = (
-  <Button variant="quiet" size="sm" asChild>
-    <Link to="/login">Login</Link>
-  </Button>
-);
-
-function AppBar({ user, showCreate, isCreating, create, showLogin }: BarProps) {
+function AppBar(props: BarProps) {
   return (
     <header
       data-shot="navbar"
@@ -118,7 +120,7 @@ function AppBar({ user, showCreate, isCreating, create, showLogin }: BarProps) {
     >
       {/* About sits next to the wordmark, as on master */}
       <div className="flex items-center gap-1">
-        {user ? (
+        {props.user ? (
           <Link
             to="/"
             className="relative flex h-11 items-center text-[19px] font-medium tracking-[-0.02em] text-ink"
@@ -130,50 +132,38 @@ function AppBar({ user, showCreate, isCreating, create, showLogin }: BarProps) {
             Chrono
           </span>
         )}
-        {aboutIcon}
+        <Button variant="quiet" size="icon" aria-label="About" asChild>
+          <Link to="/about">
+            <Info />
+          </Link>
+        </Button>
       </div>
       <div className="flex items-center gap-1">
-        {user ? (
-          <>
-            {showCreate && (
-              <Button
-                size="icon"
-                aria-label="Create a timetable"
-                disabled={isCreating}
-                onClick={create}
-                {...preloadEditorOnIntent()}
-              >
-                <Plus className="size-5" />
-              </Button>
-            )}
-            <Announcements />
-            <AvatarMenu user={user} />
-          </>
-        ) : (
-          <>
-            <ThemeButton />
-            {showLogin && loginLink}
-          </>
-        )}
+        <NavActions
+          {...props}
+          createButton={(button) => (
+            <Button
+              size="icon"
+              aria-label="Create a timetable"
+              {...button}
+              {...preloadEditorOnIntent()}
+            >
+              <Plus className="size-5" />
+            </Button>
+          )}
+        />
       </div>
     </header>
   );
 }
 
-function DesktopNav({
-  user,
-  pathname,
-  showCreate,
-  isCreating,
-  create,
-  showLogin,
-}: BarProps) {
+function DesktopNav(props: BarProps) {
   return (
     <header
       data-shot="navbar"
       className="app-navbar flex h-[60px] w-full shrink-0 items-center gap-8 border-b border-line bg-bg px-7"
     >
-      {user ? (
+      {props.user ? (
         <Link
           to="/"
           className="text-[20px] font-medium tracking-[-0.025em] text-ink"
@@ -186,48 +176,31 @@ function DesktopNav({
         </span>
       )}
       <nav className="flex h-full items-center gap-6" aria-label="Main">
-        {user && (
-          <Link
-            to="/"
-            aria-current={pathname === "/" ? "page" : undefined}
-            className="nav-link"
-          >
+        {props.user && (
+          <Link to="/" className="nav-link">
             Timetables
           </Link>
         )}
-        <Link
-          to="/about"
-          aria-current={pathname.startsWith("/about") ? "page" : undefined}
-          className="nav-link"
-        >
+        <Link to="/about" className="nav-link">
           About
         </Link>
       </nav>
       <div className="flex-1" />
       <div className="flex items-center gap-2">
-        {user ? (
-          <>
-            {showCreate && (
-              <Button
-                size="sm"
-                disabled={isCreating}
-                onClick={create}
-                {...preloadEditorOnIntent()}
-                className="mr-1"
-              >
-                <Plus />
-                Create a timetable
-              </Button>
-            )}
-            <Announcements />
-            <AvatarMenu user={user} />
-          </>
-        ) : (
-          <>
-            <ThemeButton />
-            {showLogin && loginLink}
-          </>
-        )}
+        <NavActions
+          {...props}
+          createButton={(button) => (
+            <Button
+              size="sm"
+              {...button}
+              {...preloadEditorOnIntent()}
+              className="mr-1"
+            >
+              <Plus />
+              Create a timetable
+            </Button>
+          )}
+        />
       </div>
     </header>
   );
