@@ -32,7 +32,7 @@ export const editUser = async (req: Request, res: Response) => {
 
   if (degrees.length === 2 && !isAValidDegreeCombination(degrees)) {
     return res.status(400).json({
-      message: "Dualites may only have one BE degree and one MSc degee",
+      message: "Dualites may only have one BE degree and one MSc degree",
     });
   }
 
