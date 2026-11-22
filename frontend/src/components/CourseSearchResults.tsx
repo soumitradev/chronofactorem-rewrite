@@ -1,11 +1,11 @@
 import { type courseType, getClashingExamTimes } from "lib";
-import { Bird } from "lucide-react";
 import { useMemo } from "react";
 import type z from "zod";
 import { useTimetableState } from "@/context";
 import { formatExam } from "@/lib/formatTime";
 import { useTimetableNav } from "@/lib/useTimetableNav";
 import { CourseRow } from "./CourseRow";
+import { EmptyBird } from "./EmptyBird";
 
 type Course = z.infer<typeof courseType>;
 
@@ -51,7 +51,7 @@ export const CourseSearchResults = ({ query }: { query: string }) => {
       {results.length > 0 ? (
         <div
           key={query}
-          className="mx-4 mt-2 mb-6 animate-[cf-fade-in_var(--d-2)_var(--e-out)] rounded-xl border border-line bg-surface lg:mx-0 [&>*+*]:border-t [&>*+*]:border-line [&>:first-child]:rounded-t-[calc(var(--radius-xl)-1px)] [&>:last-child]:rounded-b-[calc(var(--radius-xl)-1px)]"
+          className="mx-4 mt-2 mb-6 animate-[fade-in_var(--d-2)_var(--e-out)] rounded-xl border border-line bg-surface lg:mx-0 [&>*+*]:border-t [&>*+*]:border-line [&>:first-child]:rounded-t-[calc(var(--radius-xl)-1px)] [&>:last-child]:rounded-b-[calc(var(--radius-xl)-1px)]"
         >
           {results.map(({ course, clashing }) => (
             <CourseRow
@@ -66,13 +66,8 @@ export const CourseSearchResults = ({ query }: { query: string }) => {
           ))}
         </div>
       ) : (
-        <div className="flex animate-[cf-fade-in_var(--d-2)_var(--e-out)] flex-col items-center gap-3 px-4 pt-12 text-center">
-          <Bird
-            size={112}
-            strokeWidth={1.25}
-            aria-hidden="true"
-            className="animate-[cf-hop_400ms_var(--e-out)_1] text-ink-faint"
-          />
+        <div className="flex animate-[fade-in_var(--d-2)_var(--e-out)] flex-col items-center gap-3 px-4 pt-12 text-center">
+          <EmptyBird />
           <span className="text-[15px] font-medium text-ink-muted">
             No results
           </span>
