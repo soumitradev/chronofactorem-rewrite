@@ -3,9 +3,18 @@ import { pinoHttp } from "pino-http";
 import type { Logger, QueryRunner } from "typeorm";
 import { env } from "../config/server.js";
 
+// session cookies and the chrono secret are credentials, keep them out of
+// the logs
+const redact = [
+  "req.headers.cookie",
+  'res.headers["set-cookie"]',
+  "requestBody.chronoSecret",
+];
+
 const devOptions: LoggerOptions = {
   // this sets the overall log level
   level: env.LOG_LEVEL,
+  redact,
   transport: {
     target: "pino-pretty",
     options: {
@@ -28,6 +37,7 @@ const devOptions: LoggerOptions = {
 
 const prodOptions: LoggerOptions = {
   level: env.LOG_LEVEL,
+  redact,
   // this removes the pid and hostname
   base: undefined,
   // by default, `level` shows the level number instead of the label, which isn't very nice

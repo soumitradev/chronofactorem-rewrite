@@ -6,11 +6,8 @@ export const logger = async (
   res: Response,
   next: NextFunction,
 ) => {
-  const { log: reqLogger, ...rest } = req;
-  // debug entire request object
-  reqLogger.debug(rest);
   // log request method and URL (along with the default pino-http `req` object)
-  reqLogger.info(`${rest.method} ${req.url}`);
+  req.log.info(`${req.method} ${req.url}`);
 
   // monkey-patch res.json to make response body available for logging
   const originalSend = res.json;
@@ -21,14 +18,14 @@ export const logger = async (
   };
 
   onFinished(res, (err, res) => {
-    const { log: resLogger, ...rest } = res;
-    // debug entire response object
-    resLogger.debug(rest);
-    if (err || rest.statusCode >= 500) {
-      resLogger.error(`${rest.statusCode} ${JSON.stringify(err)}`);
+    // the raw req and res objects carry cookies in places redact can't
+    // reach, so only log their serialized forms
+    res.log.debug({ res, requestBody: req.body, responseBody: res.body });
+    if (err || res.statusCode >= 500) {
+      res.log.error({ err }, `${res.statusCode}`);
     } else {
-      resLogger.info(
-        `${rest.statusCode} ${rest.body?.message ?? rest.statusMessage}`,
+      res.log.info(
+        `${res.statusCode} ${res.body?.message ?? res.statusMessage}`,
       );
     }
   });
