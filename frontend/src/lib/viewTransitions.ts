@@ -7,11 +7,9 @@ export const prefersReducedMotion = () =>
 
 /** Whether `document.startViewTransition({ types })` is understood. */
 export const supportsTransitionTypes = () =>
-  typeof document !== "undefined" &&
   typeof document.startViewTransition === "function" &&
   typeof ViewTransition !== "undefined" &&
   "types" in ViewTransition.prototype &&
-  typeof CSS !== "undefined" &&
   CSS.supports("selector(:active-view-transition-type(a))");
 
 const tsrIndex = (location: ParsedLocation) =>
@@ -58,7 +56,7 @@ export function routeTransitionTypes(info: {
   pathChanged: boolean;
 }): string[] | false {
   if (!info.fromLocation) return false;
-  if (typeof window !== "undefined" && prefersReducedMotion()) return false;
+  if (prefersReducedMotion()) return false;
   const back = tsrIndex(info.toLocation) < tsrIndex(info.fromLocation);
   if (!info.pathChanged) {
     if (sheetClosePending) {
@@ -148,21 +146,7 @@ export function startSurfaceTransition(
     update();
     return;
   }
-  let ran = false;
-  const run = () => {
-    if (ran) return;
-    ran = true;
-    update();
-  };
-  try {
-    const transition = document.startViewTransition({
-      update: run,
-      types: [type],
-    });
-    transition.ready.catch(() => {});
-    transition.finished.catch(() => {});
-    transition.updateCallbackDone.catch(() => {});
-  } catch {
-    run();
-  }
+  const transition = document.startViewTransition({ update, types: [type] });
+  // a newer transition skips this one
+  transition.ready.catch(() => {});
 }
