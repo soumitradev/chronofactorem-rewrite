@@ -2,8 +2,7 @@ import type { Request, Response } from "express";
 import { timetableIDType } from "lib";
 import { z } from "zod";
 import { validate } from "../../middleware/zodValidateRequest.js";
-import { timetableRepository } from "../../repositories/index.js";
-import { decodeTimetableSqidOr404 } from "./helpers.js";
+import { decodeTimetableSqidOr404, findTimetableById } from "./helpers.js";
 
 const dataSchema = z.object({
   params: z.object({
@@ -20,11 +19,7 @@ export const getTimetableById = async (req: Request, res: Response) => {
     return;
   }
 
-  const timetable = await timetableRepository
-    .createQueryBuilder("timetable")
-    .leftJoinAndSelect("timetable.sections", "section")
-    .where("timetable.id = :id", { id: dbID[0] })
-    .getOne();
+  const timetable = await findTimetableById(dbID, true);
 
   if (!timetable) {
     return res.status(404).json({ message: "Timetable does not exist" });

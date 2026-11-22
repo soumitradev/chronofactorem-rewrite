@@ -7,11 +7,7 @@ import {
 import { z } from "zod";
 import { validate } from "../../middleware/zodValidateRequest.js";
 import { timetableRepository } from "../../repositories/index.js";
-import {
-  decodeTimetableSqidOr404,
-  fetchAuthorOrError,
-  fetchTimetableOrError,
-} from "./helpers.js";
+import { loadTimetableContext } from "./helpers.js";
 
 const dataSchema = z.object({
   body: z.object({
@@ -31,29 +27,17 @@ export const editTimetableMetadata = async (req: Request, res: Response) => {
   const isPrivate: boolean = req.body.isPrivate;
   const isDraft: boolean = req.body.isDraft;
 
-  const author = await fetchAuthorOrError(req, res);
-  if (!author) {
-    return;
-  }
-
   if (isDraft && !isPrivate) {
     return res
       .status(400)
       .json({ message: "draft timetable can not be public" });
   }
 
-  const dbID = decodeTimetableSqidOr404(req, res);
-  if (dbID === null) {
+  const context = await loadTimetableContext(req, res, { withSections: true });
+  if (!context) {
     return;
   }
-
-  const timetable = await fetchTimetableOrError(res, dbID, {
-    authorId: author.id,
-    joinSections: true,
-  });
-  if (!timetable) {
-    return;
-  }
+  const { timetable } = context;
 
   if (timetable.archived && isDraft) {
     return res
