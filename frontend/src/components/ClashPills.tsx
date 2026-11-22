@@ -71,12 +71,7 @@ export function markClashLanding(courseId: string, type: "L" | "P" | "T") {
   landing = { courseId, type, nonce: ++landingNonce };
 }
 
-/**
- * The nonce of the clash landing on this course and type, or null. Every pill
- * tap gets a fresh nonce, so each landing can pulse once; opening the same
- * course any other way carries the old nonce and so never pulses again. Render
- * stays pure: the one-shot slot is read here and cleared in an effect.
- */
+// each pill tap gets a fresh nonce, so a landing pulses once
 export function useClashLanding(
   courseId: string | null,
   type: string | null,

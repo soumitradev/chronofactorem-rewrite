@@ -3,7 +3,6 @@ import { Badge } from "@/components/ui/badge";
 
 type Status = { draft: boolean; archived: boolean; private: boolean };
 
-/** Draft, Archived (with its visibility), Private or Public. */
 export default function TimetableStatusChip({
   timetable,
 }: {

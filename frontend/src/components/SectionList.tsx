@@ -35,8 +35,6 @@ function SectionText({ section }: { section: Section }) {
   );
 }
 
-// one section type's rows in the course picker. A row that clashes with the
-// timetable is disabled and lists what it clashes with
 export function SectionList({
   sections,
   chosen,

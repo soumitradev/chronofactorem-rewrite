@@ -465,13 +465,11 @@ html.theme-transition * {
     transform: scale(1);
   }
 }
-/* the empty-state bird's hop on mount */
 @keyframes cf-hop {
   40% {
     transform: translateY(-10px);
   }
 }
-/* a pane sliding a whole width (plus --pane-gap) out of or into view */
 @keyframes slide-to-left {
   to {
     transform: translateX(calc(-100% - var(--pane-gap, 0px)));

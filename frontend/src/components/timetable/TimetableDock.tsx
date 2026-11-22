@@ -6,10 +6,6 @@ import { useSurfaceNav } from "@/lib/useSurfaceNav";
 import { useTimetableNav } from "@/lib/useTimetableNav";
 import { timetableDayNames } from "@/utils/timetableGrid";
 
-/**
- * The phone's bottom dock: day pills and the day/week switch, then "Courses
- * and exams" and the page's own action (Publish or PNG).
- */
 export function TimetableDock({
   dayCount,
   actions,
@@ -21,15 +17,12 @@ export function TimetableDock({
   const { openSheet } = useTimetableNav();
   const dockRef = useRef<HTMLDivElement>(null);
 
-  // While a view transition runs (a day swipe takes --d-3), Chrome hit-tests
-  // every tap to <html>, not the page under the transition overlay, so a
-  // quick second tap on a pill would be lost. Hand such taps to the dock
-  // button under the finger; it is fixed, so its box is where it shows.
+  // mid view transition Chrome hit-tests taps to <html>, so a quick second tap
+  // on a pill is lost; hand it to the (fixed) dock button under the finger
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       if (e.target !== document.documentElement) return;
-      // an open sheet hides the dock (aria-hidden/inert); its own panel
-      // slides send taps here too, and they must not reach the dock
+      // an open sheet's panel slides land here too; its aria-hidden dock must not react
       if (dockRef.current?.closest("[aria-hidden='true'],[inert]")) return;
       const hit = [...(dockRef.current?.querySelectorAll("button") ?? [])].find(
         (b) => {
@@ -56,7 +49,6 @@ export function TimetableDock({
       <div className="mx-auto flex max-w-[640px] flex-col gap-2.5">
         <div data-shot="grid" className="flex items-center gap-1">
           <div className="relative flex flex-1 gap-1">
-            {/* one shared thumb slides between the pills, back/forward too */}
             <span
               aria-hidden="true"
               className="pointer-events-none absolute inset-y-0 left-0 rounded-md bg-brand"
@@ -74,9 +66,9 @@ export function TimetableDock({
                 type="button"
                 aria-pressed={view === "day" && day === i}
                 onClick={() => showDay(i)}
+                // "Mon" for voice control, the full name for screen readers
                 className="relative z-[1] min-h-11 min-w-0 flex-1 cursor-pointer rounded-md font-mono text-[13px] font-medium text-ink-muted transition-colors duration-(--d-2) aria-pressed:text-brand-ink focus-visible:outline-2 focus-visible:outline-ring"
               >
-                {/* full name for screen readers, "Mon" for voice control */}
                 {name.slice(0, 3)}
                 <span className="sr-only">{name.slice(3)}</span>
               </button>

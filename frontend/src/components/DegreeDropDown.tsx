@@ -119,8 +119,12 @@ const DegreeDropDown = ({
               </SelectTrigger>
               <SelectContent>
                 <DegreeGroup label="Single Degrees" codes={SECOND_SINGLE}>
-                  {/* A0 marks single-degree M.Sc., since "" means no selection */}
-                  <SelectItem value="A0">None (Single degree M.Sc.)</SelectItem>
+                  <SelectItem
+                    // A0 marks single-degree M.Sc., since "" means no selection
+                    value="A0"
+                  >
+                    None (Single degree M.Sc.)
+                  </SelectItem>
                 </DegreeGroup>
               </SelectContent>
             </Select>

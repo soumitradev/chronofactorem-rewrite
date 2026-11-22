@@ -104,7 +104,6 @@ const CourseDetailsMenu = ({
   const busy =
     useIsMutating({ mutationKey: ["sections", timetable?.id] }) > 0 ||
     isLocked();
-  // Short delay before moving to next tab
   const advance = useRef<number | undefined>(undefined);
   const cancelAdvance = () => window.clearTimeout(advance.current);
   useEffect(() => cancelAdvance, []);
@@ -173,8 +172,7 @@ const CourseDetailsMenu = ({
       : undefined,
   );
 
-  // Rows already selected when a course opens don't play the tick; rows
-  // selected (or reselected) while it is open do.
+  // only rows selected while the course is open play the tick
   const selectedIds = new Set(timetable?.sections.map((s) => s.id));
   const seen = useRef<{ course: string | null; ids: Set<string> }>({
     course: null,
@@ -185,7 +183,6 @@ const CourseDetailsMenu = ({
   for (const id of seen.current.ids)
     if (!selectedIds.has(id)) seen.current.ids.delete(id);
 
-  // Clear a hover preview if the picker goes away under the pointer.
   const hovered = useRef(false);
   const hoverRef = useRef(onSectionHover);
   hoverRef.current = onSectionHover;
@@ -252,7 +249,6 @@ const CourseDetailsMenu = ({
           <div
             className={cn(
               "flex flex-col font-mono text-xs leading-normal text-ink-muted",
-              // phone sheet: line up with the sheet title after its ‹ button
               showHeader ? "pl-7" : "pl-[38px]",
               fadeIn.className,
             )}
@@ -327,9 +323,9 @@ const CourseDetailsMenu = ({
           </div>
         ) : (
           <div className="overflow-x-clip">
-            {/* desktop cards have no side margins, so the gap keeps lists apart */}
             <div
               ref={slide.trackRef}
+              // desktop cards have no side margins, so the gap keeps lists apart
               className="relative flow-root [--slide-gap:0px] lg:[--slide-gap:32px]"
             >
               {slide.panes.map((pane) => {
@@ -377,7 +373,6 @@ const CourseDetailsMenu = ({
           onClick={handleRemoveCourse}
           className={cn(
             "relative shrink-0 cursor-pointer text-[15px] font-semibold text-danger transition-colors duration-(--d-1) focus-visible:outline-offset-[-2px]",
-            // phone: full-width bar; desktop: outlined button
             "border-t border-line bg-surface pt-4 pb-[calc(16px+env(safe-area-inset-bottom))] hover:bg-danger-bg",
             "lg:mb-1 lg:rounded-xl lg:border lg:py-3",
             busy && "cursor-progress",

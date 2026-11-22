@@ -8,7 +8,6 @@ import {
 import { router } from "../router";
 import { preloadEditorOnIntent, preloadOnIntent } from "./preloadOnIntent";
 
-/** Copy, edit and publish for the timetable on the editor and view pages. */
 export function useTimetableActions(): {
   copy(): void;
   edit(): void;
@@ -44,7 +43,7 @@ export function useTimetableActions(): {
         }),
       )
       .catch(() => {
-        // useEditTimetable already toasts the error.
+        // useEditTimetable already toasts the error
       });
   };
 
@@ -52,9 +51,8 @@ export function useTimetableActions(): {
     if (timetable === undefined) return;
     setIsCopyingTimetable(true);
     setTimeout(() => {
-      // react query drops per-call mutate callbacks once their
-      // component unmounts (the caller may be a menu that closes),
-      // so navigate from the promise instead
+      // react query drops per-call mutate callbacks once the caller unmounts
+      // (it may be a closing menu), so navigate from the promise
       copyTimetable(timetable.id)
         .then((res) =>
           router.navigate({

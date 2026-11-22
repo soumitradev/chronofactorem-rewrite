@@ -14,8 +14,7 @@ export const supportsTransitionTypes = () =>
 const tsrIndex = (location: ParsedLocation) =>
   (location.state as { __TSR_index?: number }).__TSR_index ?? 0;
 
-// a sheet opening or closing is the sheet's own motion, so only a course
-// change or one sheet replacing another slides the panel
+// a sheet opening or closing is its own motion; only course or sheet swaps slide
 export const panelMoved = (a: TimetableSearch, b: TimetableSearch): boolean => {
   if (!!a.sheet !== !!b.sheet) return false;
   return (
@@ -26,8 +25,7 @@ export const panelMoved = (a: TimetableSearch, b: TimetableSearch): boolean => {
 
 let sheetClosePending = false;
 
-// the next history pop closes the sheet, so it mustn't slide the course panel
-// under the sheet's own exit
+// the next pop closes the sheet, so it mustn't slide the panel under the sheet's exit
 export function markSheetClosing(): void {
   sheetClosePending = true;
   setTimeout(() => {
@@ -35,7 +33,7 @@ export function markSheetClosing(): void {
   }, 1000);
 }
 
-// the router default, so only route changes and history pops land here. a
+// the router default, so only route changes and history pops land here; a
 // different timetable (a fresh copy) replaces the page whole instead of morphing
 export function routeTransitionTypes(info: {
   fromLocation?: ParsedLocation;

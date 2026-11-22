@@ -18,7 +18,6 @@ type ThemeProviderProps = {
 
 type ThemeProviderState = {
   theme: Theme;
-  /** `origin` (viewport px) makes the change a circular-reveal transition. */
   setTheme: (theme: Theme, origin?: { x: number; y: number }) => void;
   colorSeed: number;
   shuffleColors: () => void;
@@ -37,7 +36,6 @@ const readColorSeed = (): number => {
 
 const DARK_QUERY = "(prefers-color-scheme: dark)";
 
-/** The theme the OS currently asks for; follows changes while the page is open. */
 export function useSystemTheme(): "light" | "dark" {
   const dark = useSyncExternalStore(
     (notify) => {
@@ -91,8 +89,7 @@ export function ThemeProvider({
         setTheme(theme);
         return;
       }
-      // the view transition snapshots the DOM right after this callback, so
-      // the state and the class-applying effect must flush synchronously
+      // the transition snapshots right after this callback, so flush synchronously
       startThemeTransition(() => flushSync(() => setTheme(theme)), origin);
     },
     colorSeed,

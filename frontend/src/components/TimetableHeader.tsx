@@ -34,7 +34,7 @@ const TimetableHeader = ({
   const {
     state: { timetable, screenIsLarge },
   } = useTimetableState();
-  // Only the desktop header shows "Last Updated", so only it needs to tick.
+  // only the desktop header shows "Last Updated", so only it needs to tick
   const now = useNow(screenIsLarge);
 
   if (timetable === undefined) return null;

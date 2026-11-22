@@ -19,15 +19,13 @@ type Lock = { inFlight: number };
 
 const sharedLocks = new Map<string, Lock>();
 
-// one lock per timetable, so a section change, swap or course removal never
-// starts while another of them is in flight, wherever it was started from
+// one lock per timetable, so section changes, swaps and removals never overlap
 export const sectionLock = (timetableId: string | undefined) =>
   `sections:${timetableId}`;
 
-// Every API mutation toasts its failures. isPending lags a render behind a fast
-// double tap, so `mutateOnce` checks a synchronous lock and skips the call
-// while another one sharing it is in flight. With `unlockOnSuccess: false` the
-// lock stays held after a success, for a page that navigates away
+// isPending lags a render behind a double tap, so `mutateOnce` checks a sync lock
+// and skips while a call sharing it is in flight. `unlockOnSuccess: false` keeps
+// it held after success, for pages that navigate away
 export function useApiMutation<TData, TVariables = void, TContext = unknown>({
   lock: lockKey,
   unlockOnSuccess = true,

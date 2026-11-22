@@ -5,9 +5,7 @@ import { NavBar } from "./components/Navbar";
 import { Toaster } from "./components/ui/toaster";
 
 export default function RootComponent() {
-  // login and getDegrees are fullscreen onboarding flows, so they render
-  // without the navbar. useRouterState re-renders on navigation, unlike
-  // reading router.state directly
+  // useRouterState re-renders on navigation, reading router.state doesn't
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const showNavbar = pathname !== "/login" && pathname !== "/getDegrees";
 

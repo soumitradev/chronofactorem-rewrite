@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-/** Phone thumb-zone action bar. On desktop it sits inline after the content. */
 export function BottomBar({
   children,
   className,

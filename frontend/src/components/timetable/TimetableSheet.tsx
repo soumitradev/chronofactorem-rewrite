@@ -16,12 +16,6 @@ import { PANEL_VT_CLASS } from "@/lib/viewTransitions";
 
 type UrlSheet = "courses" | "warnings";
 
-/**
- * The phone's one bottom sheet. `?sheet=courses` shows the course list or
- * picker, `?sheet=warnings` the warning rows. Desktop shows neither (the
- * panel and the warnings popover cover them), and `announcements` belongs
- * to the root.
- */
 export function TimetableSheet({ courses }: { courses: ReactNode }) {
   const isDesktop = useIsDesktop();
   if (isDesktop) return null;
@@ -46,9 +40,8 @@ function PhoneSheet({ courses }: { courses: ReactNode }) {
       ? search.sheet
       : null;
 
-  // vaul closes itself (×, Esc, scrim, drag) before closeSheet()'s history
-  // move lands. Until the URL drops `sheet`, keep it closed so it never
-  // flashes back open, and only ask for one close.
+  // vaul closes itself before closeSheet()'s history move lands; stay closed
+  // until the URL drops `sheet` so it never flashes open, and close only once
   const [closing, setClosing] = useState(false);
   const closingRef = useRef(false);
   if (urlSheet === null && closing) setClosing(false);
@@ -65,11 +58,11 @@ function PhoneSheet({ courses }: { courses: ReactNode }) {
 
   const opener = useRef<HTMLElement | null>(null);
 
-  // Keep the last sheet's content while it animates away.
+  // keep the last sheet's content while it animates away
   const [shown, setShown] = useState<UrlSheet>(urlSheet ?? "courses");
   if (urlSheet !== null && urlSheet !== shown) setShown(urlSheet);
 
-  // Never show an empty warnings sheet (say, a stale link after fixing them).
+  // never show an empty warnings sheet (say, a stale link after fixing them)
   const emptyWarnings = urlSheet === "warnings" && summary.count === 0;
   // close() is guarded by a ref, so this asks once per stale warnings entry;
   // keep it out of the deps so it only re-runs when emptiness flips
@@ -94,16 +87,14 @@ function PhoneSheet({ courses }: { courses: ReactNode }) {
     >
       <SheetContent
         full
-        // vaul skips autofocus so the search box doesn't pop the keyboard,
-        // but then focus stays behind the scrim and Tab walks out of the
-        // sheet. Focus the sheet itself so the focus trap holds.
+        // vaul skips autofocus (no keyboard pop), which leaves focus behind the
+        // scrim; focus the sheet itself so the focus trap holds
         onOpenAutoFocus={(e) => {
           e.preventDefault();
           opener.current = document.activeElement as HTMLElement | null;
           (e.currentTarget as HTMLElement | null)?.focus();
         }}
-        // Escape in a filled search box clears it (SideMenu) rather than
-        // closing the sheet; an empty box still closes it.
+        // Escape in a filled search box clears it (SideMenu) instead of closing
         onEscapeKeyDown={(e) => {
           const target = e.target;
           if (
@@ -113,8 +104,7 @@ function PhoneSheet({ courses }: { courses: ReactNode }) {
           )
             e.preventDefault();
         }}
-        // The sheet opens from the URL, not a Radix trigger, so hand focus
-        // back to whatever opened it.
+        // opened from the URL, not a Radix trigger, so return focus ourselves
         onCloseAutoFocus={(e) => {
           e.preventDefault();
           if (opener.current?.isConnected) opener.current.focus();
@@ -123,7 +113,6 @@ function PhoneSheet({ courses }: { courses: ReactNode }) {
       >
         {shown === "warnings" ? (
           <SheetHeader
-            // master's titles are long; wrap them instead of truncating
             title={
               <span className="block whitespace-normal leading-tight">
                 {summary.title}
@@ -132,7 +121,6 @@ function PhoneSheet({ courses }: { courses: ReactNode }) {
           />
         ) : pickerOpen ? (
           <SheetHeader
-            // long names wrap to a second line rather than truncating
             title={
               course ? (
                 <span

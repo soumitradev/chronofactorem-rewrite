@@ -2,9 +2,8 @@ import { useNavigate, useRouter, useSearch } from "@tanstack/react-router";
 import { useCallback, useMemo } from "react";
 import type { RootSearch } from "./timetableSearch";
 
-// The announcements sheet lives in a root-level `sheet=announcements` param, so
-// it opens on any page and back closes it. Closing pops the entry when it is
-// ours, otherwise (deep link, reload) removes the param in place
+// a root-level param, so it opens on any page and back closes it; closing pops
+// our own entry, otherwise (deep link, reload) drops the param in place
 export function useAnnouncementsSheet() {
   const search = useSearch({ strict: false }) as RootSearch;
   const navigate = useNavigate();

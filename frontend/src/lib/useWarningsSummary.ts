@@ -4,7 +4,6 @@ import { getMissingCdcs } from "@/utils/timetable";
 
 type SectionType = "L" | "P" | "T";
 
-/** Everything the warnings surfaces (rows, chip, sheet title) need. */
 export function useWarningsSummary() {
   const {
     state: { courses, timetable, cdcs, coursesInTimetable },

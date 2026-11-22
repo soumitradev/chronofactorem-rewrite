@@ -3,8 +3,7 @@ type Slotted = { courseId: string; type: string; roomTime: string[] };
 // a section's day and hour, without the course code and room
 const slot = (roomTime: string) => roomTime.split(":").slice(2).join(":");
 
-// the timetable's sections that `section` would clash with. Picking another
-// section of the same course and type swaps it, so those don't clash
+// a section of the same course and type gets swapped out, so it never clashes
 export function clashingSections<T extends Slotted>(
   section: Slotted,
   chosen: T[],

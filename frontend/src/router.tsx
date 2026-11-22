@@ -14,7 +14,6 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      // since we use loaders
       staleTime: 30_000,
       retry: (failureCount, error) => {
         if (
@@ -33,16 +32,13 @@ export const router = new Router({
   routeTree,
 
   defaultPreload: "intent",
-  // Since we're using React Query, we don't want loader calls to ever be stale
-  // This will ensure that the loader is always called when the route is preloaded or visited
+  // React Query does the caching, so loaders run on every preload and visit
   defaultPreloadStaleTime: 0,
   context: {
     queryClient,
   },
   defaultNotFoundComponent: NotFound,
-  // Timetable pages key scroll by path, so search-param-only history moves
-  // (sheet, course, day/week) keep the page where it is. Every other page keys
-  // by history entry, so following a link still starts at the top.
+  // timetable pages key scroll by path, so search-only moves keep their place
   scrollRestoration: true,
   getScrollRestorationKey: (location) =>
     /^\/(edit|view)\//.test(location.pathname)
@@ -55,8 +51,7 @@ export const router = new Router({
 });
 
 router.subscribe("onBeforeNavigate", trackSharedTimetable);
-// runs after the router's own scroll restoration, which subscribes when the
-// router is constructed
+// after the router's scroll restoration, which subscribes on construction
 router.subscribe("onRendered", releaseStillNavbar);
 
 declare module "@tanstack/react-router" {

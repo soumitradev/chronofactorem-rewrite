@@ -16,13 +16,11 @@ import { Collapse } from "./ui/collapse";
 
 type ListMemory = {
   added: Set<string>;
-  // course id -> the row's top offset within the list
   remaining: Map<string, number>;
   sets: Set<string>;
 };
 
-// What each timetable's list looked like when it was last on screen, so a
-// course added from the picker can move from Remaining into Added on return.
+// each timetable's list as last shown, so a course added in the picker slides into Added
 const listMemory = new Map<string, ListMemory>();
 
 const topIn = (el: Element, list: Element) =>
@@ -52,15 +50,14 @@ export function CoursesTab({ editable }: { editable: boolean }) {
     () => (editable ? getRemainingCdcs(cdcs, coursesInTimetable) : []),
     [editable, cdcs, coursesInTimetable],
   );
-  // Every remaining entry as if nothing were added, to keep CDC order for
-  // sets that are collapsing away.
+  // keeps CDC order for sets that are collapsing away
   const allEntries = useMemo(
     () => (editable ? getRemainingCdcs(cdcs, []) : []),
     [editable, cdcs],
   );
 
   const [prev] = useState(() => listMemory.get(timetableId));
-  // Sets satisfied while the list was away play their collapse once.
+  // Sets satisfied while the list was away play their collapse once
   const [exiting, setExiting] = useState<Set<string>>(() => {
     if (!prev || prefersReducedMotion()) return new Set();
     const now = new Set(
@@ -73,8 +70,7 @@ export function CoursesTab({ editable }: { editable: boolean }) {
   const addedRef = useRef<HTMLDivElement>(null);
   const remainingRef = useRef<HTMLDivElement>(null);
 
-  // Courses that moved from Remaining into Added since last time slide up.
-  // Runs on mount only: it compares against the list as it was last shown.
+  // mount only: it compares against the list as it was last shown
   useLayoutEffect(() => {
     const list = listRef.current;
     const addedGroup = addedRef.current;
@@ -88,7 +84,7 @@ export function CoursesTab({ editable }: { editable: boolean }) {
       if (!row) continue;
       const dy = from - topIn(row, list);
       if (dy === 0) continue;
-      // Opaque and on top while it slides over the rows in between.
+      // opaque and on top while it slides over the rows in between
       row.style.position = "relative";
       row.style.zIndex = "1";
       row.style.transition = "none";
@@ -155,7 +151,6 @@ export function CoursesTab({ editable }: { editable: boolean }) {
       : live.has(e.course.id),
   );
 
-  // Nothing to look up without a known degree and year.
   const noCdcList =
     timetable.year !== 0 &&
     !timetable.degrees.includes(unknownDegree) &&

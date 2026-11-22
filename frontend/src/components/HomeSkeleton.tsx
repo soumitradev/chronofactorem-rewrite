@@ -22,13 +22,14 @@ export function HomeSkeleton() {
             className="grid grid-cols-[92px_1fr_auto] items-center gap-4 rounded-xl border border-line bg-surface p-4"
           >
             <Skeleton className="h-16 w-[92px] rounded-[8px]" />
-            {/* Rows sized by the card's own line heights; the desktop meta
-                line usually wraps in a third of 1100px. */}
             <div className="min-w-0">
               <div className="flex h-[1lh] items-center text-lg">
                 <Skeleton className="h-3.5 w-2/5" />
               </div>
-              <div className="mt-[3px] flex h-[1lh] items-center text-sm lg:h-[2lh]">
+              <div
+                // the desktop meta line usually wraps in a third of 1100px
+                className="mt-[3px] flex h-[1lh] items-center text-sm lg:h-[2lh]"
+              >
                 <Skeleton className="h-3 w-3/5" />
               </div>
               <Skeleton className="mt-[7px] h-[calc(1lh+6px)] w-16 rounded-full text-sm" />

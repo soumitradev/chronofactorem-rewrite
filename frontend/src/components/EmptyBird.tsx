@@ -1,7 +1,6 @@
 import { Bird } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// hops once on mount; reduced motion cuts the animation short in index.css
 export function EmptyBird({ className }: { className?: string }) {
   return (
     <Bird

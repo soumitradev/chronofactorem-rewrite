@@ -15,8 +15,7 @@ import { ThemeButton } from "./ThemeButton";
 type User = NonNullable<ReturnType<typeof useUser>["data"]>;
 
 export function NavBar() {
-  // only one bar is mounted: two would double the announcement fetch and its
-  // "new announcements" toast
+  // mount one bar only, or the announcement fetch and its toast run twice
   const isDesktop = useIsDesktop();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isEditPage =
@@ -58,8 +57,6 @@ export function NavBar() {
     );
   }
 
-  // user is undefined when the visitor is logged out, so the bars render
-  // without the parts that need authentication
   const props = {
     user,
     showCreate: !!user && !isEditPage,
@@ -118,7 +115,6 @@ function AppBar(props: BarProps) {
       data-shot="navbar"
       className="app-navbar flex h-[52px] w-full shrink-0 items-center justify-between border-b border-line bg-bg px-4"
     >
-      {/* About sits next to the wordmark, as on master */}
       <div className="flex items-center gap-1">
         {props.user ? (
           <Link

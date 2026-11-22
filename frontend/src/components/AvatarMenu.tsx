@@ -70,9 +70,8 @@ export function AvatarMenu({ user }: { user: { name: string } }) {
             <span>Edit Profile</span>
           </Link>
         </DropdownMenuItem>
-        {/* An item so keyboard users can reach it: arrows move onto the row,
-            left/right then change the theme. Pointer use hits the segments. */}
         <DropdownMenuItem
+          // an item so arrow keys reach the row; left/right then change the theme
           className="my-1 p-0 focus:bg-transparent"
           onSelect={(e) => e.preventDefault()}
           aria-label={`Theme: ${themeName}`}

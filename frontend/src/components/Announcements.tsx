@@ -83,8 +83,7 @@ function Announcements() {
   const { data: announcements, isLoading, isError, error } = useAnnouncements();
   const { open, show, hide } = useAnnouncementsSheet();
   const isDesktop = useIsDesktop();
-  // only a skeleton someone saw fades: the list usually loads before the
-  // sheet is opened
+  // only fade a skeleton someone saw: the list usually loads before the sheet opens
   const fadeIn = useSkeletonFadeIn(isLoading && open);
   const [readAnnouncements, setReadAnnouncements] = useState<string[]>(() => {
     try {
@@ -102,8 +101,7 @@ function Announcements() {
       return [];
     }
   });
-  // Items sliding out of Unread, and items read this session (their Read rows
-  // fade in rather than appearing).
+  // items read this session fade into Read instead of just appearing
   const [leaving, setLeaving] = useState<Set<string>>(() => new Set());
   const [justRead, setJustRead] = useState<Set<string>>(() => new Set());
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());

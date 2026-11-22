@@ -60,7 +60,7 @@ type EditTimetableParams = {
   };
 };
 
-// Shared so every caller sees one edit in flight, wherever it was started.
+// shared so every caller sees one edit in flight, wherever it started
 export const editTimetableKey = ["editTimetable"];
 
 export const useEditTimetable = ({ unlockOnSuccess = true } = {}) => {
@@ -73,7 +73,6 @@ export const useEditTimetable = ({ unlockOnSuccess = true } = {}) => {
     },
     onSuccess: async (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["user"] });
-      // Make sure we actually refetch data here!
       await queryClient.invalidateQueries(
         { queryKey: ["timetable", variables.id], refetchType: "all" },
         { throwOnError: true },
@@ -124,7 +123,6 @@ export const useAddRemoveTimetableSection = (
       return result.data;
     },
     onSuccess: () => {
-      // home lists timetables by last edit
       queryClient.invalidateQueries({ queryKey: ["user"] });
       return queryClient.invalidateQueries({
         queryKey: ["timetable", timetableId],
@@ -154,7 +152,6 @@ export const useSwapTimetableSections = (timetableId: string | undefined) => {
       });
     },
     onSuccess: () => {
-      // home lists timetables by last edit
       queryClient.invalidateQueries({ queryKey: ["user"] });
       return queryClient.invalidateQueries({
         queryKey: ["timetable", timetableId],

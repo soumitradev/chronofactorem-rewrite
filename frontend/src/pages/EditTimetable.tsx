@@ -80,8 +80,6 @@ function EditTimetable() {
     return <ReportIssue error={"Error fetching queries"} />;
   }
 
-  // the picker reports mouse hovers; ghost the row on the grid unless it is
-  // already in the timetable or clashes with something that is
   const handleSectionHover = (sectionId: string | null) => {
     const section = course?.sections.find((s) => s.id === sectionId);
     if (
@@ -100,7 +98,6 @@ function EditTimetable() {
     preview && !timetable.sections.some((item) => item.id === preview.id)
       ? preview
       : null;
-  // show ghost for what's about to be swapped out
   const outgoing =
     ghost &&
     (timetableDetailsSections.find(

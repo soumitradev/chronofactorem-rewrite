@@ -77,8 +77,8 @@ function TimetableCard({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
 
-  // the dialogs open from a menu item, so Radix has no trigger to return focus
-  // to. A deleted card is inert by then, so Home has already moved focus on
+  // opened from a menu item, so Radix has no trigger to return focus to
+  // (a deleted card is inert by then and Home moves focus itself)
   const returnFocus = (e: Event) => {
     e.preventDefault();
     menuButton.current?.focus();
@@ -187,7 +187,7 @@ function TimetableCard({
                     });
                   })
                   .catch(() => {
-                    // useEditTimetable already toasts the error.
+                    // useEditTimetable already toasts the error
                   });
               }}
             >

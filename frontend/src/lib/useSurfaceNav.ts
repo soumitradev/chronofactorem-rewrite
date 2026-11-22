@@ -13,29 +13,21 @@ const resolve = (search: TimetableSearch, dayCount: number) => ({
   day: Math.min(search.day ?? defaultDay(dayCount, new Date()), dayCount - 1),
 });
 
-/**
- * The phone surface's view and day, with their defaults when the URL has none:
- * the day view below 640px and the week otherwise, and today's weekday.
- */
 export function useSurfaceNav(dayCount: number) {
   const { search, setView, showDay } = useTimetableNav();
   const router = useRouter();
   const { view, day } = resolve(search, dayCount);
-  // Taps compare against the latest location, not this render's, so a second
-  // tap that lands before the first has rendered still counts.
+  // the latest location, not this render's, so a tap before the last one rendered counts
   const latest = useCallback(
     () => resolve(router.latestLocation.search as TimetableSearch, dayCount),
     [router, dayCount],
   );
-  // the day view slides between days; from the week, the tiles morph into
-  // the day's agenda
   const show = useCallback(
     (d: number) => {
       const cur = latest();
       if (cur.view === "day") {
         if (d === cur.day) return;
-        // the swipe scrolls back up from here; read it before a shorter day
-        // clamps it
+        // the swipe scrolls back up from here; read it before a shorter day clamps it
         document.documentElement.style.setProperty(
           "--tt-day-scroll",
           `${window.scrollY}px`,

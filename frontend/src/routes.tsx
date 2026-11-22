@@ -40,7 +40,6 @@ const loginRoute = new Route({
         if (data) throw redirect({ to: data.redirect });
       })
       .catch((error) => {
-        // a 401 means the user should be on the login page
         if (error instanceof AxiosError && error.response?.status === 401)
           return;
         throw error;
@@ -48,8 +47,7 @@ const loginRoute = new Route({
   errorComponent: ToastError,
 }).lazy(() => import("./pages/Login").then((d) => d.Route));
 
-// Users land here after every login, so registered users (the ones /api/user
-// knows) are sent home. Unregistered ones get a 401 and fill in their degrees
+// every login lands here: known users go home, a 401 means degrees are needed
 const getDegreesRoute = new Route({
   getParentRoute: () => rootRoute,
   path: "getDegrees",
@@ -59,7 +57,6 @@ const getDegreesRoute = new Route({
     try {
       await queryClient.ensureQueryData(userQueryOptions);
     } catch (error) {
-      // without a valid Google OAuth session there is nothing to register
       if (
         error instanceof AxiosError &&
         error.response?.status === 401 &&
@@ -143,8 +140,7 @@ const timetablePageLoader = async ({
   queryClient.ensureQueryData(userQueryOptions).catch(() => {
     // user is optional on timetable pages: viewing works logged out
   });
-  // Courses are per semester, so the timetable loads first. Awaiting both
-  // keeps them in the loader, so preloading warms them before navigation
+  // awaited so a preload warms both; courses need the timetable's semester
   const timetable = await queryClient.ensureQueryData(
     timetableQueryOptions(timetableId),
   );
@@ -163,8 +159,7 @@ const TimetablePageError = ({ error }: { error: Error }) => {
     handleLoginRedirect(error);
     toastHandler(error);
   }, [error, is404]);
-  // a notFound() thrown here would skip notFoundComponent for the root error
-  // boundary. Drafts 404 for anyone but their author, so this path is common
+  // a notFound() here would skip notFoundComponent at the root error boundary
   if (is404) return <NotFound />;
   return (
     <div
