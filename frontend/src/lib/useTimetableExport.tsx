@@ -1,7 +1,6 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import ReportIssueToastAction from "@/components/ReportIssueToastAction";
 import { TimetableSurface } from "@/components/timetable/TimetableSurface";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { toast } from "@/components/ui/use-toast";
 import { useTimetableState } from "@/context";
 import { hueStyle } from "@/lib/courseHues";
@@ -14,6 +13,8 @@ import { useOrientation } from "./useOrientation";
 export type ExportStatus = "idle" | "rendering" | "done";
 
 const DONE_MS = 1200;
+const NOT_PREPARED =
+  "The timetable image could not be prepared. Please try again.";
 
 let styleProperties: string[] | undefined;
 
@@ -55,14 +56,51 @@ function declaredStyleProperties(node: HTMLElement): string[] {
   return styleProperties;
 }
 
-const CourseSwatch = ({ hue }: { hue: number | undefined }) =>
-  hue === undefined ? null : (
-    <span
-      aria-hidden="true"
-      className="course-tint mt-1.5 size-2.5 shrink-0 rounded-[3px] border border-line bg-ev"
-      style={hueStyle(hue)}
-    />
-  );
+const ExportList = ({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) => (
+  <>
+    <h3 className="text-[13px] font-medium text-ink-muted">{title}</h3>
+    <ul className="mt-2 divide-y divide-line rounded-xl border border-line bg-surface">
+      {children}
+    </ul>
+  </>
+);
+
+const ExportRow = ({
+  hue,
+  name,
+  code,
+  children,
+}: {
+  hue: number | undefined;
+  name: string;
+  code?: string;
+  children: React.ReactNode;
+}) => (
+  <li className="flex items-center justify-between gap-4 px-4 py-3">
+    <div className="flex min-w-0 items-start gap-2.5">
+      {hue !== undefined && (
+        <span
+          aria-hidden="true"
+          className="course-tint mt-1.5 size-2.5 shrink-0 rounded-[3px] border border-line bg-ev"
+          style={hueStyle(hue)}
+        />
+      )}
+      <div className="min-w-0">
+        <div className="truncate text-[15px] leading-snug font-medium text-ink">
+          {titleCase(name)}
+        </div>
+        {code && <div className="font-mono text-xs text-ink-muted">{code}</div>}
+      </div>
+    </div>
+    {children}
+  </li>
+);
 
 function ExamList({
   title,
@@ -87,35 +125,23 @@ function ExamList({
   if (exams.length === 0) return null;
   return (
     <div>
-      <h3 className="text-[13px] font-medium text-ink-muted">{title}</h3>
-      <ul className="mt-2 divide-y divide-line rounded-xl border border-line bg-surface">
+      <ExportList title={title}>
         {exams.map((exam) => {
           const name = nameOf(exam.code);
           return (
-            <li
+            <ExportRow
               key={exam.code}
-              className="flex items-center justify-between gap-4 px-4 py-3"
+              hue={courseHues.get(exam.code)}
+              name={name ?? exam.code}
+              code={name && exam.code}
             >
-              <div className="flex min-w-0 items-start gap-2.5">
-                <CourseSwatch hue={courseHues.get(exam.code)} />
-                <div className="min-w-0">
-                  <div className="truncate text-[15px] leading-snug font-medium text-ink">
-                    {titleCase(name ?? exam.code)}
-                  </div>
-                  {name && (
-                    <div className="font-mono text-xs text-ink-muted">
-                      {exam.code}
-                    </div>
-                  )}
-                </div>
-              </div>
               <span className="shrink-0 font-mono text-xs font-medium tabular-nums text-ink">
                 {formatExam(exam.start, exam.end)}
               </span>
-            </li>
+            </ExportRow>
           );
         })}
-      </ul>
+      </ExportList>
     </div>
   );
 }
@@ -160,10 +186,7 @@ export function useTimetableExport(): {
       );
       await document.fonts.ready;
       const node = frame.current;
-      if (!node)
-        throw new Error(
-          "The timetable image could not be prepared. Please try again.",
-        );
+      if (!node) throw new Error(NOT_PREPARED);
       // toBlob encodes the PNG off the main thread, unlike toPng's toDataURL
       const { toBlob } = await htmlToImage;
       const blob = await toBlob(node, {
@@ -172,10 +195,7 @@ export function useTimetableExport(): {
         style: { position: "static" },
         includeStyleProperties: declaredStyleProperties(node),
       });
-      if (!blob)
-        throw new Error(
-          "The timetable image could not be prepared. Please try again.",
-        );
+      if (!blob) throw new Error(NOT_PREPARED);
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.download = "timetable.png";
@@ -206,102 +226,80 @@ export function useTimetableExport(): {
 
   const exportElement =
     status === "rendering" && timetable !== undefined ? (
-      <TooltipProvider>
-        <div
-          aria-hidden="true"
-          ref={frame}
-          className="pointer-events-none fixed left-[-10000px] top-0 w-[1440px] bg-bg px-10 pt-9 pb-10 text-ink"
-        >
-          <div className="flex items-end justify-between gap-6">
-            <div>
-              <h2 className="text-[36px] leading-[1.08] font-normal tracking-[-0.03em]">
-                {timetable.name}
-              </h2>
-              <div className="mt-2 flex flex-wrap items-center gap-2 font-mono text-xs text-ink-muted">
-                {timetableMeta(timetable).map((part, i) => (
-                  <Fragment key={part}>
-                    {i > 0 && (
-                      <span aria-hidden="true" className="text-ink-faint">
-                        ·
-                      </span>
-                    )}
-                    <span
-                      className={i === 0 ? "font-medium text-ink" : undefined}
-                    >
-                      {part}
-                    </span>
-                  </Fragment>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className={`mt-6 ${orientation === "rows" ? "h-[720px]" : ""}`}>
-            <TimetableSurface
-              sections={timetableDetailsSections}
-              layout="desktop"
-              view="week"
-              day={0}
-              orientation={orientation}
-              mode="export"
-            />
-          </div>
-          <div className="mt-7 grid grid-cols-[1fr_1fr] gap-10">
-            <div>
-              {coursesInTimetable.some((course) => course !== undefined) && (
-                <>
-                  <h3 className="text-[13px] font-medium text-ink-muted">
-                    Courses
-                  </h3>
-                  <ul className="mt-2 divide-y divide-line rounded-xl border border-line bg-surface">
-                    {coursesInTimetable.map((course) => {
-                      if (course === undefined) return null;
-                      const sections = timetable.sections
-                        .filter((s) => s.courseId === course.id)
-                        .map((s) => `${s.type}${s.number}`)
-                        .sort();
-                      return (
-                        <li
-                          key={course.id}
-                          className="flex items-center justify-between gap-4 px-4 py-3"
-                        >
-                          <div className="flex min-w-0 items-start gap-2.5">
-                            <CourseSwatch hue={courseHues.get(course.code)} />
-                            <div className="min-w-0">
-                              <div className="truncate text-[15px] leading-snug font-medium text-ink">
-                                {titleCase(course.name)}
-                              </div>
-                              <div className="font-mono text-xs text-ink-muted">
-                                {course.code}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex shrink-0 flex-wrap justify-end gap-1">
-                            {sections.map((section) => (
-                              <span
-                                key={section}
-                                className="rounded-md bg-sunk px-2 py-0.5 font-mono text-xs font-medium text-ink-muted"
-                              >
-                                {section}
-                              </span>
-                            ))}
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </>
+      <div
+        aria-hidden="true"
+        ref={frame}
+        className="pointer-events-none fixed left-[-10000px] top-0 w-[1440px] bg-bg px-10 pt-9 pb-10 text-ink"
+      >
+        <h2 className="text-[36px] leading-[1.08] font-normal tracking-[-0.03em]">
+          {timetable.name}
+        </h2>
+        <div className="mt-2 flex flex-wrap items-center gap-2 font-mono text-xs text-ink-muted">
+          {timetableMeta(timetable).map((part, i) => (
+            <Fragment key={part}>
+              {i > 0 && (
+                <span aria-hidden="true" className="text-ink-faint">
+                  ·
+                </span>
               )}
-            </div>
-            <div className="flex flex-col gap-6">
-              <ExamList title="Midsems" kind="MIDSEM" />
-              <ExamList title="Compres" kind="COMPRE" />
-            </div>
-          </div>
-          <p className="mt-7 font-mono text-xs text-ink-faint">
-            Made with ChronoFactorem
-          </p>
+              <span className={i === 0 ? "font-medium text-ink" : undefined}>
+                {part}
+              </span>
+            </Fragment>
+          ))}
         </div>
-      </TooltipProvider>
+        <div className={`mt-6 ${orientation === "rows" ? "h-[720px]" : ""}`}>
+          <TimetableSurface
+            sections={timetableDetailsSections}
+            layout="desktop"
+            view="week"
+            day={0}
+            orientation={orientation}
+            mode="export"
+          />
+        </div>
+        <div className="mt-7 grid grid-cols-[1fr_1fr] gap-10">
+          <div>
+            {coursesInTimetable.some((course) => course !== undefined) && (
+              <ExportList title="Courses">
+                {coursesInTimetable.map((course) => {
+                  if (course === undefined) return null;
+                  const sections = timetable.sections
+                    .filter((s) => s.courseId === course.id)
+                    .map((s) => `${s.type}${s.number}`)
+                    .sort();
+                  return (
+                    <ExportRow
+                      key={course.id}
+                      hue={courseHues.get(course.code)}
+                      name={course.name}
+                      code={course.code}
+                    >
+                      <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                        {sections.map((section) => (
+                          <span
+                            key={section}
+                            className="rounded-md bg-sunk px-2 py-0.5 font-mono text-xs font-medium text-ink-muted"
+                          >
+                            {section}
+                          </span>
+                        ))}
+                      </div>
+                    </ExportRow>
+                  );
+                })}
+              </ExportList>
+            )}
+          </div>
+          <div className="flex flex-col gap-6">
+            <ExamList title="Midsems" kind="MIDSEM" />
+            <ExamList title="Compres" kind="COMPRE" />
+          </div>
+        </div>
+        <p className="mt-7 font-mono text-xs text-ink-faint">
+          Made with ChronoFactorem
+        </p>
+      </div>
     ) : null;
 
   return { status, exportPng, exportElement };
