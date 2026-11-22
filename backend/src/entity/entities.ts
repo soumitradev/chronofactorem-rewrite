@@ -109,14 +109,15 @@ export class Timetable {
   )
   sections!: Section[];
 
+  // course code and day + hour slot, e.g. ["CS F211:M2"]
   @Column({ type: "varchar", length: 20, array: true })
   timings!: string[];
 
+  // e.g. ["CS F211|MIDSEM|2021-04-20T09:00:00.000Z|2021-04-20T11:00:00.000Z"]
   @Column({ name: "exam_times", type: "varchar", array: true })
-  // e.g. ["CS F211:2021-04-20T09:00:00.000Z|2021-04-20T11:00:00.000Z"]
   examTimes!: string[];
 
-  // e.g. ["CS F211-LP", "CS F212-L"]
+  // section types each course is still missing, e.g. ["CS F211:LP", "CS F212:L"]
   @Column({ type: "varchar", length: 30, array: true })
   warnings!: string[];
 
