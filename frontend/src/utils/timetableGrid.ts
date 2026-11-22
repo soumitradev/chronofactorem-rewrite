@@ -1,5 +1,8 @@
 import type { TimetableSectionType } from "./timetable";
 
+export const GRID_START_HOUR = 8;
+export const GRID_HOURS = 13;
+
 export const timetableDays = ["M", "T", "W", "Th", "F", "S"];
 export const timetableDayNames = [
   "Monday",
@@ -21,27 +24,39 @@ export type TimetableCell = Omit<TimetableSectionType, "roomTime"> & {
   presence?: "present" | "entering" | "leaving";
 };
 
+const parseSlot = (dayName: string, hourValue: string) => {
+  const day = timetableDays.indexOf(dayName);
+  const hour = Number(hourValue) - 1;
+  if (day < 0 || !Number.isInteger(hour) || hour < 0 || hour >= GRID_HOURS)
+    return null;
+  return { day, hour };
+};
+
+// roomTime entries are CODE:ROOM:DAY:HOUR with a 1-based hour
+export function parseRoomTime(entry: string) {
+  const [code, room, dayName, hourValue] = entry.split(":");
+  const slot = parseSlot(dayName, hourValue);
+  return slot && { code, room, ...slot };
+}
+
+// timetable timings fuse the day and hour, as in CODE:Th3
+function parseTiming(entry: string) {
+  const match = /^(\D+)(\d+)$/.exec(entry.slice(entry.lastIndexOf(":") + 1));
+  const slot = match && parseSlot(match[1], match[2]);
+  return slot && { code: entry.split(":", 1)[0], ...slot };
+}
+
 export function buildTimetableGrid(sections: TimetableSectionType[]) {
   const slots = new Map<string, TimetableCell>();
   let dayCount = 5;
   let hourCount = 9;
   for (const section of sections) {
     for (const time of section.roomTime) {
-      const [code, room, dayName, hourValue] = time.split(":");
-      const day = timetableDays.indexOf(dayName);
-      const hour = Number(hourValue) - 1;
-      if (day < 0 || !Number.isInteger(hour) || hour < 0 || hour >= 13)
-        continue;
-      slots.set(`${day}:${hour}`, {
-        ...section,
-        code,
-        room,
-        day,
-        hour,
-        span: 1,
-      });
-      dayCount = Math.max(dayCount, day + 1);
-      hourCount = Math.max(hourCount, hour + 1);
+      const slot = parseRoomTime(time);
+      if (!slot) continue;
+      slots.set(`${slot.day}:${slot.hour}`, { ...section, ...slot, span: 1 });
+      dayCount = Math.max(dayCount, slot.day + 1);
+      hourCount = Math.max(hourCount, slot.hour + 1);
     }
   }
   const cells: TimetableCell[] = [];
@@ -97,7 +112,7 @@ export function nowPosition(
   if (dow === 0) return null;
   const day = dow - 1;
   if (day >= dayCount) return null;
-  const hour = now.getHours() - 8;
+  const hour = now.getHours() - GRID_START_HOUR;
   if (hour < 0 || hour >= hourCount) return null;
   return { day, hour, fraction: now.getMinutes() / 60 };
 }
@@ -126,17 +141,6 @@ export function titleCase(name: string): string {
     .join(" ");
 }
 
-export function parseTiming(entry: string) {
-  const match = /^(Th|M|T|W|F|S)(\d{1,2})$/.exec(
-    entry.slice(entry.lastIndexOf(":") + 1),
-  );
-  if (!match) return null;
-  const day = timetableDays.indexOf(match[1]);
-  const hour = Number(match[2]) - 1;
-  if (day < 0 || hour < 0 || hour >= 13) return null;
-  return { day, hour };
-}
-
 export function buildTimingsPreview(timings: readonly string[]) {
   // store the course code per slot so callers can tint each cell
   const filled = new Map<string, string>();
@@ -145,7 +149,7 @@ export function buildTimingsPreview(timings: readonly string[]) {
   for (const entry of timings) {
     const slot = parseTiming(entry);
     if (!slot) continue;
-    filled.set(`${slot.day}:${slot.hour}`, entry.split(":", 1)[0]);
+    filled.set(`${slot.day}:${slot.hour}`, slot.code);
     dayCount = Math.max(dayCount, slot.day + 1);
     hourCount = Math.max(hourCount, slot.hour + 1);
   }
