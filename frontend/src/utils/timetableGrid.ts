@@ -3,11 +3,11 @@ import { hueStyle } from "@/lib/courseHues";
 import type { TimetableSectionType } from "./timetable";
 
 export const GRID_START_HOUR = 8;
-export const GRID_HOURS = 13;
+const GRID_HOURS = 13;
 export const MIN_DAYS = 5;
 export const MIN_HOURS = 9;
 
-export const timetableDays = ["M", "T", "W", "Th", "F", "S"];
+const timetableDays = ["M", "T", "W", "Th", "F", "S"];
 export const timetableDayNames = [
   "Monday",
   "Tuesday",
@@ -82,7 +82,7 @@ export function buildTimetableGrid(sections: TimetableSectionType[]) {
   return { cells, dayCount, hourCount };
 }
 
-export type AgendaItem =
+type AgendaItem =
   | { kind: "class"; cell: TimetableCell }
   | { kind: "free"; from: number; to: number };
 
