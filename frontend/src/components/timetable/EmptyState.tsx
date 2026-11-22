@@ -1,4 +1,5 @@
 import { Bird } from "lucide-react";
+import type { SurfaceMode } from "@/utils/timetableGrid";
 
 /** The bird with one line of hint text under it; the text is what is read out. */
 export function EmptyState({
@@ -26,7 +27,7 @@ export function EmptyState({
   );
 }
 
-export const emptyTimetableHint = (mode: "edit" | "view" | "export") =>
+export const emptyTimetableHint = (mode: SurfaceMode) =>
   mode === "edit"
     ? "Add a course from Courses and exams to get started."
     : "This timetable has no classes yet.";

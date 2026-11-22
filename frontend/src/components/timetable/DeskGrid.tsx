@@ -9,22 +9,20 @@ import { hueStyle } from "@/lib/courseHues";
 import { formatAxisHour } from "@/lib/formatTime";
 import { titleCase } from "@/lib/titleCase";
 import {
-  blockName,
+  blockProps,
+  type SurfaceMode,
   type TimetableCell,
   timetableDayNames,
 } from "@/utils/timetableGrid";
 import { EmptyState, emptyTimetableHint } from "./EmptyState";
 import { OpenButton } from "./OpenButton";
 
-const vtStyle = (cell: TimetableCell) =>
-  ({ "--vt": blockName(cell) }) as React.CSSProperties;
-
 type DeskGridProps = {
   cells: TimetableCell[];
   dayCount: number;
   hourCount: number;
   orientation: "rows" | "columns";
-  mode: "edit" | "view" | "export";
+  mode: SurfaceMode;
   pending?: boolean;
   onOpen?: (
     cell: TimetableCell,
@@ -396,17 +394,17 @@ export function DeskGrid({
         const edit = mode === "edit";
         const leaving = cell.presence === "leaving";
         const going = !leaving && cell.id === outgoing;
+        const block = blockProps(cell, mode);
         return (
           <div
             key={key}
-            // live blocks carry their morph name (C7); export and leaving don't
-            style={leaving ? style : { ...style, ...vtStyle(cell) }}
+            style={{ ...place(cell.day, cell.hour, cell.span), ...block.style }}
             data-presence={cell.presence ?? "present"}
             data-outgoing={going ? "" : undefined}
             inert={leaving}
             className={`@container relative z-1 min-w-0 overflow-hidden rounded-md ${
               going ? "tt-outgoing" : "course-tint border border-line bg-ev"
-            } ${leaving ? "" : "tt-block"} ${
+            } ${block.className} ${
               edit ? "hover:border-ink/40 hover:bg-ev-hover" : ""
             }`}
           >

@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+import { hueStyle } from "@/lib/courseHues";
 import type { TimetableSectionType } from "./timetable";
 
 export const GRID_START_HOUR = 8;
@@ -14,6 +16,8 @@ export const timetableDayNames = [
   "Friday",
   "Saturday",
 ];
+
+export type SurfaceMode = "edit" | "view" | "export";
 
 export type TimetableCell = Omit<TimetableSectionType, "roomTime"> & {
   code: string;
@@ -125,11 +129,19 @@ export function splitCode(code: string): { dept: string; number: string } {
   return { dept: code.slice(0, i), number: code.slice(i + 1) };
 }
 
-export function blockName(cell: TimetableCell): string {
-  return `tt-${cell.id}-${cell.day}-${cell.hour}`.replace(
-    /[^a-zA-Z0-9_-]/g,
-    "_",
-  );
+const blockName = (cell: TimetableCell): string =>
+  `tt-${cell.id}-${cell.day}-${cell.hour}`.replace(/[^a-zA-Z0-9_-]/g, "_");
+
+// live blocks carry their morph name; export and leaving blocks don't
+export function blockProps(cell: TimetableCell, mode: SurfaceMode) {
+  const named = mode !== "export" && cell.presence !== "leaving";
+  return {
+    className: named ? "tt-block" : "",
+    style: {
+      ...hueStyle(cell.hue),
+      ...(named ? { "--vt": blockName(cell) } : {}),
+    } as CSSProperties,
+  };
 }
 
 export function buildTimingsPreview(timings: readonly string[]) {

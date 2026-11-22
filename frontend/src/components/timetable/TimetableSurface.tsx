@@ -11,6 +11,7 @@ import type { TimetableSectionType } from "@/utils/timetable";
 import {
   buildTimetableGrid,
   nowPosition,
+  type SurfaceMode,
   type TimetableCell,
 } from "@/utils/timetableGrid";
 import { Agenda } from "./Agenda";
@@ -18,7 +19,6 @@ import { DeskGrid } from "./DeskGrid";
 import { NowLine } from "./NowLine";
 import { WeekGrid } from "./WeekGrid";
 
-export type SurfaceMode = "edit" | "view" | "export";
 export type Orientation = "rows" | "columns";
 
 export type SurfaceProps = {
