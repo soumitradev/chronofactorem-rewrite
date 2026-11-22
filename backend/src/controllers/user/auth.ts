@@ -67,7 +67,7 @@ export async function manageAuthRedirect(req: Request, res: Response) {
     setPkceCookies(res, code_verifier, state);
     return res.redirect(authRedirect.href);
   } catch (err: any) {
-    logger.error("Authentication failure: ", err);
+    logger.error(err, "Authentication failure");
     return res.status(500).json({
       message: "authentication failure",
     });
@@ -319,7 +319,7 @@ export async function getDegrees(req: Request, res: Response) {
       success: true,
     });
   } catch (error: any) {
-    logger.error("Failed to register: ", error);
+    logger.error(error, "Failed to register");
     return res.status(500).json({
       success: false,
       message: "failed to register",
@@ -417,7 +417,7 @@ export async function checkAuthStatus(req: Request, res: Response) {
         error: "invalid user session",
       });
     }
-    logger.error("Error while checking auth status: ", error);
+    logger.error(error, "Error while checking auth status");
     return res.status(500).json({
       message: "Internal Server Error",
       error: JSON.stringify(error),
