@@ -6,7 +6,6 @@ import {
 } from "lib";
 import { z } from "zod";
 
-// interface for userdata to be stored in the session cookie and for validating the type of session cookie
 export const ZodUnfinishedUserSession = z.object({
   name: namedNonEmptyStringType("name"),
   email: namedEmailType(),

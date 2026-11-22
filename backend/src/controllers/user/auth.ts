@@ -26,13 +26,6 @@ import {
   toTitleCase,
 } from "../../utils/authUtils.js";
 
-// On any route, when checking if a user is logged in, check for the cookie
-// in cookiestorage on the server, using -
-// const session = req.cookies['session'];
-// now, the session object can be used to see if the user is logged in or not
-
-// on the frontend, for accessing routes, send requests with credentials:true
-
 // redirects to the logto sign in page
 export async function manageAuthRedirect(req: Request, res: Response) {
   const logger = req.log;
@@ -66,7 +59,7 @@ export async function manageAuthRedirect(req: Request, res: Response) {
     }
     setPkceCookies(res, code_verifier, state);
     return res.redirect(authRedirect.href);
-  } catch (err: any) {
+  } catch (err) {
     logger.error(err, "Authentication failure");
     return res.status(500).json({
       message: "authentication failure",
@@ -80,8 +73,6 @@ export async function authCallback(req: Request, res: Response) {
     if (req.cookies.session && req.cookies.fingerprint) {
       res.redirect(env.FRONTEND_URL);
     } else {
-      // sets session cookie
-
       const pkceVerifier = req.cookies.pkce_verifier;
       const pkceState = req.cookies.pkce_state;
       if (pkceVerifier === undefined || pkceState === undefined) {
@@ -100,18 +91,15 @@ export async function authCallback(req: Request, res: Response) {
       );
       clearPkceCookies(res);
 
-      // obtaining the access_token from tokenSet
       const access_token = tokenSet.access_token;
 
-      // obtaining userInfo from the access_token code
       const userInfo = await client.fetchUserInfo(
         config,
         access_token,
         tokenSet.claims()?.sub || "",
       );
 
-      // defines maxAge according to env vars
-      const maxAge = env.SESSION_MAX_AGE_MS; // converts into milliseconds
+      const maxAge = env.SESSION_MAX_AGE_MS;
 
       // fall back to the id token's claims if userinfo doesn't return them
       const idTokenClaims = tokenSet.claims();
@@ -134,11 +122,7 @@ export async function authCallback(req: Request, res: Response) {
       }
       return startSession(res, name, email, maxAge);
     }
-  } catch (_err: any) {
-    // If user exists on database, redirect them to frontpage, if not
-    // redirect them to a /profile route where they fill their degrees
-    // on the frontend
-
+  } catch {
     return res.status(401).redirect(`${env.BACKEND_URL}/auth/login`);
   }
 }
@@ -265,11 +249,6 @@ export async function getDegrees(req: Request, res: Response) {
   const logger = req.log;
 
   try {
-    // for user to enter their degrees
-    // the session cookie is parsed here, and then the info about
-    // the user: name, email and degrees is stored on the database
-
-    // gets userInfo as part of session
     const read = readSession(req);
     if (!read.ok) {
       return res.status(401).json({
@@ -318,7 +297,7 @@ export async function getDegrees(req: Request, res: Response) {
     res.json({
       success: true,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error(error, "Failed to register");
     return res.status(500).json({
       success: false,
@@ -374,7 +353,6 @@ export async function checkAuthStatus(req: Request, res: Response) {
         .getOne();
 
       if (user) {
-        // reset session
         clearAuthCookies(res);
         return res.status(401).json({
           message: "user not logged in",
@@ -408,7 +386,7 @@ export async function checkAuthStatus(req: Request, res: Response) {
       message: "cannot verify auth status",
       error: "user session malformed",
     });
-  } catch (error: any) {
+  } catch (error) {
     // expired sessions, or ones signed with a different key
     if (error instanceof jwt.JsonWebTokenError) {
       clearAuthCookies(res);

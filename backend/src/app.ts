@@ -13,14 +13,11 @@ import timetableRouter from "./routers/timetableRouter.js";
 import userRouter from "./routers/userRouter.js";
 import { httpLogger } from "./utils/logger.js";
 
-// create express app
 const app = express();
 
-// logging
 app.use(httpLogger);
 app.use(logger);
 
-// to parse cookies
 app.use(cookieParser());
 const frontendUrl = new URL(env.FRONTEND_URL);
 app.use(
@@ -34,16 +31,12 @@ app.use(
 );
 app.use(express.json());
 
-// register express routers from defined application routers
 app.use("/user", userRouter);
 app.use("/course", courseRouter);
 app.use("/auth", authRouter);
 app.use("/timetable", timetableRouter);
 
-// setup express app here
-// ...
-
-// Disable Express header for security
+// keep the express version out of response headers
 app.disable("x-powered-by");
 
 // express 5 forwards errors thrown by async handlers here

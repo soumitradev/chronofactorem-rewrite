@@ -4,7 +4,6 @@ import { initializeDataSource } from "./db.js";
 
 initializeDataSource()
   .then(async () => {
-    // start express server
     app.listen(env.BACKEND_PORT);
 
     console.log(
