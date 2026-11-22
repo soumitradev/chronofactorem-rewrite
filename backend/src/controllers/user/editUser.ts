@@ -28,7 +28,6 @@ const dataSchema = z.object({
 export const editUserValidator = validate(dataSchema);
 
 export const editUser = async (req: Request, res: Response) => {
-  const logger = req.log;
   const degrees: degreeList = req.body.degrees;
 
   if (degrees.length === 2 && !isAValidDegreeCombination(degrees)) {
@@ -37,22 +36,16 @@ export const editUser = async (req: Request, res: Response) => {
     });
   }
 
-  try {
-    await userRepository
-      .createQueryBuilder()
-      .update("user")
-      .set({ degrees })
-      .where("id = :id", { id: req.session?.id })
-      .returning("*")
-      .execute()
-      .then((response) => {
-        return response.raw[0].id;
-      });
-  } catch (err: any) {
-    logger.error("Error editing degrees: ", err.message);
-
-    return res.status(500).json({ message: "Internal Server Error" });
-  }
+  await userRepository
+    .createQueryBuilder()
+    .update("user")
+    .set({ degrees })
+    .where("id = :id", { id: req.session?.id })
+    .returning("*")
+    .execute()
+    .then((response) => {
+      return response.raw[0].id;
+    });
 
   return res.json({ message: "User details updated successfully" });
 };

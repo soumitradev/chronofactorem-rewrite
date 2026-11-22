@@ -1,4 +1,3 @@
-import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express, {
@@ -33,7 +32,7 @@ app.use(
     ],
   }),
 );
-app.use(bodyParser.json());
+app.use(express.json());
 
 // register express routers from defined application routers
 app.use("/user", userRouter);
@@ -47,10 +46,14 @@ app.use("/timetable", timetableRouter);
 // Disable Express header for security
 app.disable("x-powered-by");
 
-// Error handling
-app.use((err: any, req: Request, res: Response, _: NextFunction) => {
+// express 5 forwards errors thrown by async handlers here
+app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
   req.log.error(err);
-  res.status(err.status || 500).json({ message: "Internal Server Error" });
+  const status =
+    err instanceof Object && "status" in err && typeof err.status === "number"
+      ? err.status
+      : 500;
+  res.status(status).json({ message: "Internal Server Error" });
 });
 
 export default app;

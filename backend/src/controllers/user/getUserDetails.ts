@@ -1,7 +1,6 @@
 import type { Request, Response } from "express";
 import { namedUUIDType } from "lib";
 import { z } from "zod";
-import type { User } from "../../entity/entities.js";
 import { validate } from "../../middleware/zodValidateRequest.js";
 import { userRepository } from "../../repositories/index.js";
 import { clearAuthCookies } from "../../utils/authUtils.js";
@@ -16,48 +15,40 @@ const dataSchema = z.object({
 export const getUserDetailsValidator = validate(dataSchema);
 
 export const getUserDetails = async (req: Request, res: Response) => {
-  const logger = req.log;
   const id = req.params.id ?? req.session?.id;
-  let user: User | null = null;
-
-  try {
-    user = await userRepository
-      .createQueryBuilder("user")
-      // the join's parameter must not be named :id — query builder params
-      // are global, and the where clause below would overwrite this binding
-      // and silently disable the private/draft filter
-      .leftJoin(
-        "user.timetables",
-        "timetable",
-        "(user.id <> :sessionId and timetable.private = :private and timetable.draft = :draft) or (user.id = :sessionId)",
-        {
-          sessionId: req.session?.id,
-          draft: false,
-          private: false,
-        },
-      )
-      .select([
-        "user",
-        "timetable.id",
-        "timetable.name",
-        "timetable.degrees",
-        "timetable.private",
-        "timetable.draft",
-        "timetable.archived",
-        "timetable.year",
-        "timetable.acadYear",
-        "timetable.semester",
-        "timetable.timings",
-        "timetable.createdAt",
-        "timetable.lastUpdated",
-      ])
-      .where("user.id = :id", { id })
-      .orderBy("timetable.id", "ASC")
-      .getOne();
-  } catch (err: any) {
-    logger.error("Error while querying for user: ", err.message);
-    return res.status(500).json({ message: "Internal Server Error" });
-  }
+  const user = await userRepository
+    .createQueryBuilder("user")
+    // the join's parameter must not be named :id — query builder params
+    // are global, and the where clause below would overwrite this binding
+    // and silently disable the private/draft filter
+    .leftJoin(
+      "user.timetables",
+      "timetable",
+      "(user.id <> :sessionId and timetable.private = :private and timetable.draft = :draft) or (user.id = :sessionId)",
+      {
+        sessionId: req.session?.id,
+        draft: false,
+        private: false,
+      },
+    )
+    .select([
+      "user",
+      "timetable.id",
+      "timetable.name",
+      "timetable.degrees",
+      "timetable.private",
+      "timetable.draft",
+      "timetable.archived",
+      "timetable.year",
+      "timetable.acadYear",
+      "timetable.semester",
+      "timetable.timings",
+      "timetable.createdAt",
+      "timetable.lastUpdated",
+    ])
+    .where("user.id = :id", { id })
+    .orderBy("timetable.id", "ASC")
+    .getOne();
 
   if (!user) {
     // DB reset can cause user not to exist so we invalidate login

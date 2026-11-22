@@ -1,18 +1,11 @@
 import type { Request, Response } from "express";
 import { announcementRepository } from "../../repositories/index.js";
 
-export const getAllAnnouncements = async (req: Request, res: Response) => {
-  const logger = req.log;
-  try {
-    const announcements = await announcementRepository
-      .createQueryBuilder("announcement")
-      .orderBy("announcement.createdAt", "DESC")
-      .getMany();
+export const getAllAnnouncements = async (_req: Request, res: Response) => {
+  const announcements = await announcementRepository
+    .createQueryBuilder("announcement")
+    .orderBy("announcement.createdAt", "DESC")
+    .getMany();
 
-    return res.status(200).json(announcements);
-  } catch (err: any) {
-    logger.error("Error retrieving announcements: ", err.message);
-
-    return res.status(500).json({ message: "Internal Server Error" });
-  }
+  return res.status(200).json(announcements);
 };
