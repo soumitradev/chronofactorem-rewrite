@@ -72,7 +72,7 @@ export function useSkeletonFadeIn(loading: boolean) {
   return {
     className:
       waited && !loading
-        ? "motion-safe:animate-[skeleton-fade-in_var(--d-2)_var(--e-out)]"
+        ? "motion-safe:animate-[fade-in_var(--d-2)_var(--e-out)]"
         : "",
     onAnimationEnd: (e: React.AnimationEvent) => {
       if (e.target === e.currentTarget) setWaited(false);
