@@ -9,11 +9,12 @@ import {
   timetableRepository,
 } from "../../repositories/index.js";
 import {
+  addExamTimings,
   checkForClassHoursClash,
   checkForExamHoursClash,
-} from "../../utils/checkForClashes.js";
-import { addExamTimings } from "../../utils/updateSection.js";
-import { updateSectionWarnings } from "../../utils/updateWarnings.js";
+  formatSectionTimings,
+  updateSectionWarnings,
+} from "../../utils/timetableDomain.js";
 import { getCourseSectionTypes, loadTimetableContext } from "./helpers.js";
 
 const dataSchema = z.object({
@@ -101,9 +102,7 @@ export const addSection = async (req: Request, res: Response) => {
     timetable.warnings,
   );
 
-  const newTimes: string[] = section.roomTime.map(
-    (time) => `${course?.code}:${time.split(":")[2]}${time.split(":")[3]}`,
-  );
+  const newTimes = formatSectionTimings(course.code, section);
 
   const newExamTimes = timetable.examTimes;
   addExamTimings(newExamTimes, course);
