@@ -20,7 +20,7 @@ import { WeekGrid } from "./WeekGrid";
 
 export type Orientation = "rows" | "columns";
 
-export type SurfaceProps = {
+type SurfaceProps = {
   sections: TimetableSectionType[];
   layout: "phone" | "desktop";
   view: "day" | "week"; // phone only
