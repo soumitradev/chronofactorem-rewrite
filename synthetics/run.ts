@@ -11,7 +11,7 @@ import { build, preview } from "vite";
 import scenario from "../backend/src/seed/scenarios/starter-pack.json" with {
   type: "json",
 };
-import { type Part, synthetics } from "./synthetics.js";
+import { type Part, synthetics } from "./synthetics.ts";
 
 const root = resolve(import.meta.dirname, "..");
 const backendDir = resolve(root, "backend");
@@ -393,9 +393,6 @@ const shoot = async (
       reducedMotion: "reduce",
     });
     await context.clock.setFixedTime(NOW);
-    // tsx wraps named functions in an __name helper, which functions sent to
-    // the page would otherwise call and not find
-    await context.addInitScript({ content: "window.__name = (f) => f;" });
     // seeded Math.random
     await context.addInitScript(() => {
       let seed = 1;
