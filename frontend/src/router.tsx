@@ -6,6 +6,7 @@ import { trackSharedTimetable } from "./lib/sharedTransition";
 import {
   releaseStillNavbar,
   routeTransitionTypes,
+  supportsTransitionTypes,
 } from "./lib/viewTransitions";
 import { routeTree } from "./routes";
 
@@ -28,12 +29,6 @@ export const queryClient = new QueryClient({
   },
 });
 
-// Only opt in to view transitions where transition types are supported;
-// otherwise TanStack would transition search-only navigations too.
-const supportsTransitionTypes =
-  typeof CSS !== "undefined" &&
-  CSS.supports("selector(:active-view-transition-type(a))");
-
 export const router = new Router({
   routeTree,
 
@@ -53,7 +48,8 @@ export const router = new Router({
     /^\/(edit|view)\//.test(location.pathname)
       ? location.pathname
       : (location.state.__TSR_key ?? location.href),
-  defaultViewTransition: supportsTransitionTypes
+  // without transition types TanStack would transition search-only moves too
+  defaultViewTransition: supportsTransitionTypes()
     ? { types: routeTransitionTypes }
     : false,
 });
@@ -63,9 +59,17 @@ router.subscribe("onBeforeNavigate", trackSharedTimetable);
 // router is constructed
 router.subscribe("onRendered", releaseStillNavbar);
 
-// Register things for typesafety
 declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router;
+  }
+  interface HistoryState {
+    // pushed by the app, so back can pop it instead of leaving the page
+    chronoNav?: boolean;
+    rootSheet?: string;
+    // how many entries deep into the open sheet this one is
+    sheetDepth?: number;
+    // the sheet was already open on the entry below the first push (deep link)
+    sheetDeepRoot?: boolean;
   }
 }
