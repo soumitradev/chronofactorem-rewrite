@@ -1,7 +1,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-/** Swaps `value` with a vertical slide. The first render does not animate. */
+// swaps `value` with a vertical slide; the first render doesn't animate
 export function Roll({
   value,
   className,
@@ -21,12 +21,6 @@ export function Roll({
     setCurrent({ key, value });
   }
 
-  React.useEffect(() => {
-    if (!leaving) return;
-    const id = window.setTimeout(() => setLeaving(null), 220);
-    return () => window.clearTimeout(id);
-  }, [leaving]);
-
   return (
     <span className={cn("inline-grid overflow-hidden", className)}>
       {leaving && (
@@ -34,6 +28,7 @@ export function Roll({
           key={`out-${leaving.key}`}
           aria-hidden="true"
           className="col-start-1 row-start-1 animate-[cf-roll-out_var(--d-2)_var(--e-out)_both]"
+          onAnimationEnd={() => setLeaving(null)}
         >
           {leaving.value}
         </span>
