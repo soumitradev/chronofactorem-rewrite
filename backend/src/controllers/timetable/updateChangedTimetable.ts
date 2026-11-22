@@ -62,6 +62,7 @@ export const updateChangedTimetable = async (req: Request, res: Response) => {
       .getMany();
 
     for (const timetable of timetables) {
+      const removedSections: Section[] = [];
       if (checkForExamTimingsChange(timetable, course)) {
         timetable.examTimes = removeCourseExamTimes(
           timetable.examTimes,
@@ -70,11 +71,7 @@ export const updateChangedTimetable = async (req: Request, res: Response) => {
 
         if (checkForExamHoursClash(timetable, course).clash) {
           for (const sec of timetable.sections) {
-            await manager
-              .createQueryBuilder()
-              .relation(Timetable, "sections")
-              .of(timetable)
-              .remove(sec);
+            removedSections.push(sec);
             removeSectionFromTimetable(timetable, sec);
           }
           timetable.warnings = timetable.warnings.filter(
@@ -84,9 +81,7 @@ export const updateChangedTimetable = async (req: Request, res: Response) => {
           timetable.draft = true;
           timetable.private = true;
         } else {
-          const newExamTimes = timetable.examTimes;
-          addExamTimings(newExamTimes, course);
-          timetable.examTimes = newExamTimes;
+          addExamTimings(timetable.examTimes, course);
         }
       }
       for (const section of timetable.sections) {
@@ -94,15 +89,11 @@ export const updateChangedTimetable = async (req: Request, res: Response) => {
 
         if (newSection !== undefined) {
           removeSectionFromTimetable(timetable, section);
-          await manager
-            .createQueryBuilder()
-            .relation(Timetable, "sections")
-            .of(timetable)
-            .remove(section);
 
           if (checkForClassHoursClash(timetable, newSection).clash) {
             // keep the clashing section out and unpublish the timetable so
             // its author sees the missing section in the warnings
+            removedSections.push(section);
             timetable.draft = true;
             timetable.private = true;
             timetable.warnings = updateSectionWarnings(
@@ -113,14 +104,10 @@ export const updateChangedTimetable = async (req: Request, res: Response) => {
               timetable.warnings,
             );
           } else {
-            const newTimes = formatSectionTimings(course.code, newSection);
-            await manager
-              .createQueryBuilder()
-              .relation(Timetable, "sections")
-              .of(timetable)
-              .add(section);
-
-            timetable.timings = [...timetable.timings, ...newTimes];
+            timetable.timings = [
+              ...timetable.timings,
+              ...formatSectionTimings(course.code, newSection),
+            ];
             timetable.sections = [...timetable.sections, newSection];
           }
         }
@@ -137,22 +124,23 @@ export const updateChangedTimetable = async (req: Request, res: Response) => {
           course.code,
         );
       }
-    }
 
-    // the join above only loaded this course's sections, so saving
-    // timetable.sections would wipe every other course's sections. With
-    // sections undefined, save leaves the join table alone; the section
-    // changes were already written above
-    type timetableWithoutSections = Omit<Timetable, "sections"> & {
-      sections: Section[] | undefined;
-    };
-    const timetablesWithoutSections: timetableWithoutSections[] = timetables;
-    await manager.save(
-      timetablesWithoutSections.map((x) => {
-        x.sections = undefined;
-        return x;
-      }),
-    );
+      if (removedSections.length > 0) {
+        await manager
+          .createQueryBuilder()
+          .relation(Timetable, "sections")
+          .of(timetable)
+          .remove(removedSections);
+      }
+      // update() not save(): the join only loaded this course's sections
+      await manager.update(Timetable, timetable.id, {
+        timings: timetable.timings,
+        examTimes: timetable.examTimes,
+        warnings: timetable.warnings,
+        draft: timetable.draft,
+        private: timetable.private,
+      });
+    }
 
     for (const section of course.sections) {
       await manager
