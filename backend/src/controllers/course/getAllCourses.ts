@@ -55,7 +55,7 @@ export const getAllCourses = async (req: Request, res: Response) => {
     }
 
     if (courses.length === 0) {
-      return res.status(404).json({ message: "Courses do not not exist" });
+      return res.status(404).json({ message: "Courses do not exist" });
     }
 
     // Don't cache the endpoint on client, Nginx will handle it via ETag
