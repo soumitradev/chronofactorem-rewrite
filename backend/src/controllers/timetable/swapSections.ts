@@ -17,12 +17,7 @@ import {
   removeSection as removeSectionFromTimetable,
 } from "../../utils/updateSection.js";
 import { updateSectionWarnings } from "../../utils/updateWarnings.js";
-import {
-  decodeTimetableSqidOr404,
-  fetchAuthorOrError,
-  fetchTimetableOrError,
-  getCourseSectionTypes,
-} from "./helpers.js";
+import { getCourseSectionTypes, loadTimetableContext } from "./helpers.js";
 
 const dataSchema = z.object({
   body: z.object({
@@ -38,35 +33,21 @@ export const swapSectionsValidator = validate(dataSchema);
 
 export const swapSections = async (req: Request, res: Response) => {
   const logger = req.log;
-  const dbID = decodeTimetableSqidOr404(req, res);
-  if (dbID === null) {
-    return;
-  }
   const sectionId = req.body.sectionId;
   const newSectionId = req.body.newSectionId;
 
-  // Common checks
-
-  const author = await fetchAuthorOrError(req, res);
-  if (!author) {
-    return;
-  }
-
-  const timetable = await fetchTimetableOrError(res, dbID, {
-    authorId: author.id,
-    joinSections: true,
-    mustBeDraft: true,
+  const context = await loadTimetableContext(req, res, {
+    withSections: true,
+    draftOnly: true,
   });
-  if (!timetable) {
+  if (!context) {
     return;
   }
+  const { author, timetable } = context;
 
   // Checks that removeSection makes
 
-  const section = await sectionRepository
-    .createQueryBuilder("section")
-    .where("section.id = :sectionId", { sectionId })
-    .getOne();
+  const section = await sectionRepository.findOneBy({ id: sectionId });
 
   if (section === null) {
     return res.status(404).json({ message: "Section not found" });
@@ -89,24 +70,17 @@ export const swapSections = async (req: Request, res: Response) => {
 
   // Checks that addSection makes
 
-  const newSection = await sectionRepository
-    .createQueryBuilder("section")
-    .where("section.id = :newSectionId", { newSectionId })
-    .getOne();
+  const newSection = await sectionRepository.findOneBy({ id: newSectionId });
 
   if (newSection === null) {
     return res.status(404).json({ message: "New section not found" });
   }
 
-  const course = await courseRepository
-    .createQueryBuilder("course")
-    .where("course.id = :id", { id: section.courseId })
-    .getOne();
+  const course = await courseRepository.findOneBy({ id: section.courseId });
 
-  const newCourse = await courseRepository
-    .createQueryBuilder("course")
-    .where("course.id = :id", { id: newSection.courseId })
-    .getOne();
+  const newCourse = await courseRepository.findOneBy({
+    id: newSection.courseId,
+  });
 
   if (!course || !newCourse) {
     return res.status(404).json({ message: "course not found" });

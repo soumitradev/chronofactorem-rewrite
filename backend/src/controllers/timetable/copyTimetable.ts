@@ -6,11 +6,7 @@ import { validate } from "../../middleware/zodValidateRequest.js";
 import { timetableRepository } from "../../repositories/index.js";
 import timetableJSON from "../../timetable.json" with { type: "json" };
 import sqids from "../../utils/sqids.js";
-import {
-  decodeTimetableSqidOr404,
-  fetchAuthorOrError,
-  fetchTimetableOrError,
-} from "./helpers.js";
+import { loadTimetableContext } from "./helpers.js";
 
 const dataSchema = z.object({
   params: z.object({
@@ -21,15 +17,15 @@ const dataSchema = z.object({
 export const copyTimetableValidator = validate(dataSchema);
 
 export const copyTimetable = async (req: Request, res: Response) => {
-  const dbID = decodeTimetableSqidOr404(req, res);
-  if (dbID === null) {
+  const context = await loadTimetableContext(req, res, {
+    withSections: true,
+    anyAuthor: true,
+    notFoundMessage: "timetable to be copied not found",
+  });
+  if (!context) {
     return;
   }
-
-  const author = await fetchAuthorOrError(req, res);
-  if (!author) {
-    return;
-  }
+  const { author, timetable: copiedTimetable } = context;
 
   // new timetable default properties
   const name = "Untitled Timetable";
@@ -49,14 +45,6 @@ export const copyTimetable = async (req: Request, res: Response) => {
   const createdAt: Date = new Date();
   const lastUpdated: Date = new Date();
   const authorId: string = author.id;
-
-  const copiedTimetable = await fetchTimetableOrError(res, dbID, {
-    joinSections: true,
-    notFoundMessage: "timetable to be copied not found",
-  });
-  if (!copiedTimetable) {
-    return;
-  }
 
   if (copiedTimetable.archived) {
     return res

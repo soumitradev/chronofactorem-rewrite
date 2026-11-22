@@ -8,16 +8,13 @@ import {
 } from "../../repositories/index.js";
 import sqids, { validSqid } from "../../utils/sqids.js";
 
-// Fetches the user behind the current session. Sends a 401 and returns null if
-// the user is not registered
 export const fetchAuthorOrError = async (
   req: Request,
   res: Response,
 ): Promise<User | null> => {
-  const author = await userRepository
-    .createQueryBuilder("user")
-    .where("user.id = :id", { id: req.session?.id })
-    .getOne();
+  // findOneBy throws on an undefined id, so check the session to send a 401 instead
+  const author =
+    req.session && (await userRepository.findOneBy({ id: req.session.id }));
   if (!author) {
     res.status(401).json({ message: "unregistered user" });
     return null;
@@ -25,57 +22,60 @@ export const fetchAuthorOrError = async (
   return author;
 };
 
-// Decodes the sqid timetable id from the request params. Sends a 404 and
-// returns null if it is not a valid sqid.
 export const decodeTimetableSqidOr404 = (
   req: Request,
   res: Response,
-): number[] | null => {
-  const dbID = sqids.decode(req.params.id as string);
-  if (!validSqid(dbID)) {
+): number | null => {
+  const decoded = sqids.decode(req.params.id as string);
+  if (!validSqid(decoded)) {
     res.status(404).json({ message: "Timetable does not exist" });
     return null;
   }
-  return dbID;
+  return decoded[0];
 };
 
-// Fetches a timetable by decoded id, optionally loading its sections and
-// enforcing ownership and draft/archived state. Sends the matching error
-// response and returns null on any failure.
-export const fetchTimetableOrError = async (
+export const findTimetableById = (id: number, withSections: boolean) =>
+  timetableRepository.findOne({
+    where: { id },
+    relations: { sections: withSections },
+  });
+
+type TimetableContextOptions = {
+  withSections?: boolean;
+  draftOnly?: boolean;
+  anyAuthor?: boolean;
+  notFoundMessage?: string;
+};
+
+// Sends the matching error response and returns null when the id, session
+// user, timetable, ownership or draft state check fails
+export const loadTimetableContext = async (
+  req: Request,
   res: Response,
-  dbID: number[],
-  options: {
-    authorId?: string;
-    joinSections?: boolean;
-    mustBeDraft?: boolean;
-    notFoundMessage?: string;
-  },
-): Promise<Timetable | null> => {
-  let timetableQuery = timetableRepository
-    .createQueryBuilder("timetable")
-    .where("timetable.id = :id", { id: dbID[0] });
-  if (options.joinSections) {
-    timetableQuery = timetableQuery.leftJoinAndSelect(
-      "timetable.sections",
-      "section",
-    );
+  options: TimetableContextOptions = {},
+): Promise<{ author: User; timetable: Timetable } | null> => {
+  const id = decodeTimetableSqidOr404(req, res);
+  if (id === null) {
+    return null;
   }
-  const timetable = await timetableQuery.getOne();
+
+  const author = await fetchAuthorOrError(req, res);
+  if (!author) {
+    return null;
+  }
+
+  const timetable = await findTimetableById(id, options.withSections ?? false);
   if (!timetable) {
     res
       .status(404)
       .json({ message: options.notFoundMessage ?? "timetable not found" });
     return null;
   }
-  if (
-    options.authorId !== undefined &&
-    timetable.authorId !== options.authorId
-  ) {
+  if (!options.anyAuthor && timetable.authorId !== author.id) {
     res.status(403).json({ message: "user does not own timetable" });
     return null;
   }
-  if (options.mustBeDraft) {
+  if (options.draftOnly) {
     if (!timetable.draft) {
       res.status(418).json({ message: "timetable is not a draft" });
       return null;
@@ -85,10 +85,9 @@ export const fetchTimetableOrError = async (
       return null;
     }
   }
-  return timetable;
+  return { author, timetable };
 };
 
-// Fetches the distinct section types of a course.
 export const getCourseSectionTypes = async (
   manager: EntityManager,
   courseId: string,

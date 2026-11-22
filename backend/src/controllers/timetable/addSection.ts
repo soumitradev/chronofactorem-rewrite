@@ -14,12 +14,7 @@ import {
 } from "../../utils/checkForClashes.js";
 import { addExamTimings } from "../../utils/updateSection.js";
 import { updateSectionWarnings } from "../../utils/updateWarnings.js";
-import {
-  decodeTimetableSqidOr404,
-  fetchAuthorOrError,
-  fetchTimetableOrError,
-  getCourseSectionTypes,
-} from "./helpers.js";
+import { getCourseSectionTypes, loadTimetableContext } from "./helpers.js";
 
 const dataSchema = z.object({
   body: z.object({
@@ -33,31 +28,18 @@ const dataSchema = z.object({
 export const addSectionValidator = validate(dataSchema);
 
 export const addSection = async (req: Request, res: Response) => {
-  const dbID = decodeTimetableSqidOr404(req, res);
-  if (dbID === null) {
-    return;
-  }
-
   const sectionId = req.body.sectionId;
 
-  const author = await fetchAuthorOrError(req, res);
-  if (!author) {
-    return;
-  }
-
-  const timetable = await fetchTimetableOrError(res, dbID, {
-    authorId: author.id,
-    joinSections: true,
-    mustBeDraft: true,
+  const context = await loadTimetableContext(req, res, {
+    withSections: true,
+    draftOnly: true,
   });
-  if (!timetable) {
+  if (!context) {
     return;
   }
+  const { timetable } = context;
 
-  const section = await sectionRepository
-    .createQueryBuilder("section")
-    .where("section.id = :id", { id: sectionId })
-    .getOne();
+  const section = await sectionRepository.findOneBy({ id: sectionId });
 
   if (!section) {
     return res.status(404).json({ message: "section not found" });
@@ -65,10 +47,7 @@ export const addSection = async (req: Request, res: Response) => {
 
   const courseId = section.courseId;
 
-  const course = await courseRepository
-    .createQueryBuilder("course")
-    .where("course.id = :id", { id: courseId })
-    .getOne();
+  const course = await courseRepository.findOneBy({ id: courseId });
 
   if (!course) {
     return res.status(404).json({ message: "course not found" });

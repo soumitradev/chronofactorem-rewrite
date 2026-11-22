@@ -10,12 +10,7 @@ import {
 } from "../../repositories/index.js";
 import { removeSection as removeSectionFromTimetable } from "../../utils/updateSection.js";
 import { updateSectionWarnings } from "../../utils/updateWarnings.js";
-import {
-  decodeTimetableSqidOr404,
-  fetchAuthorOrError,
-  fetchTimetableOrError,
-  getCourseSectionTypes,
-} from "./helpers.js";
+import { getCourseSectionTypes, loadTimetableContext } from "./helpers.js";
 
 const dataSchema = z.object({
   body: z.object({
@@ -31,30 +26,18 @@ export const removeCourseValidator = validate(dataSchema);
 // same end state as removing each section in turn, in one transaction
 export const removeCourse = async (req: Request, res: Response) => {
   const logger = req.log;
-  const dbID = decodeTimetableSqidOr404(req, res);
-  if (dbID === null) {
-    return;
-  }
   const courseId = req.body.courseId;
 
-  const author = await fetchAuthorOrError(req, res);
-  if (!author) {
-    return;
-  }
-
-  const timetable = await fetchTimetableOrError(res, dbID, {
-    authorId: author.id,
-    joinSections: true,
-    mustBeDraft: true,
+  const context = await loadTimetableContext(req, res, {
+    withSections: true,
+    draftOnly: true,
   });
-  if (!timetable) {
+  if (!context) {
     return;
   }
+  const { author, timetable } = context;
 
-  const course = await courseRepository
-    .createQueryBuilder("course")
-    .where("course.id = :id", { id: courseId })
-    .getOne();
+  const course = await courseRepository.findOneBy({ id: courseId });
 
   if (!course) {
     return res.status(404).json({ message: "course not found" });
