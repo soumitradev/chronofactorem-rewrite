@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   appendFileSync,
@@ -20,12 +20,12 @@ import { synthetics } from "./synthetics.ts";
 // that's edited on every run.
 //
 // the images live in this repo under a ref that isn't a branch, so clones
-// never download them, and get there with plain git rather than the api. that ref only ever moves forward, every image is named
-// after its hash and every link pins a commit, so a report keeps showing
-// exactly what it showed for as long as the repo exists
+// never download them, and get there with plain git rather than the api.
+// that ref only ever moves forward, every image is named after its hash and
+// every link pins a commit, so a report keeps showing exactly what it showed
+// for as long as the repo exists
 
 const {
-  GITHUB_TOKEN,
   GITHUB_REPOSITORY,
   GITHUB_STEP_SUMMARY,
   PR_NUMBER,
@@ -35,29 +35,11 @@ const {
 const shotsDir = resolve(import.meta.dirname, "screenshots");
 const MARKER = "<!-- synthetics-report -->";
 
-const github = async <T>(
-  path: string,
-  init: { method?: string; body?: unknown } = {},
-): Promise<{ status: number; data: T }> => {
-  const url = path.startsWith("/repos/")
-    ? path
-    : `/repos/${GITHUB_REPOSITORY}${path}`;
-  const res = await fetch(`https://api.github.com${url}`, {
-    method: init.method ?? "GET",
-    headers: {
-      authorization: `Bearer ${GITHUB_TOKEN}`,
-      accept: "application/vnd.github+json",
-      "x-github-api-version": "2022-11-28",
-    },
-    body: init.body === undefined ? undefined : JSON.stringify(init.body),
-  });
-  if (!res.ok && res.status !== 404 && res.status !== 422) {
-    throw new Error(
-      `${init.method ?? "GET"} ${url}: ${res.status} ${await res.text()}`,
-    );
-  }
-  return { status: res.status, data: (await res.json()) as T };
-};
+const gh = (args: string[], input?: string) =>
+  execFileSync("gh", args, { input, encoding: "utf8" });
+
+const stderrOf = (error: unknown) =>
+  error instanceof Error && "stderr" in error ? String(error.stderr) : "";
 
 const REF = `refs/${IMAGES_REF}`;
 const git = (
@@ -81,16 +63,19 @@ const read = (commit: string, path: string) =>
 const sha256 = (data: Buffer) =>
   createHash("sha256").update(data).digest("hex");
 
-// a png's chunks, after its 8-byte signature
+const PNG_SIGNATURE = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+]);
+
 const chunks = (png: Buffer) => {
   const out: { type: string; data: Buffer }[] = [];
-  for (let at = 8; at < png.length; ) {
-    const length = png.readUInt32BE(at);
+  for (let offset = PNG_SIGNATURE.length; offset < png.length; ) {
+    const length = png.readUInt32BE(offset);
     out.push({
-      type: png.toString("latin1", at + 4, at + 8),
-      data: png.subarray(at + 8, at + 8 + length),
+      type: png.toString("latin1", offset + 4, offset + 8),
+      data: png.subarray(offset + 8, offset + 8 + length),
     });
-    at += length + 12;
+    offset += length + 12;
   }
   return out;
 };
@@ -148,9 +133,11 @@ const blinkImage = async (before: Buffer, after: Buffer) => {
       ),
     ),
   );
-  const [ihdr, otherIhdr] = frames.map(
-    (frame) => frame.find(({ type }) => type === "IHDR")?.data as Buffer,
-  );
+  const [ihdr, otherIhdr] = frames.map((frame) => {
+    const header = frame.find(({ type }) => type === "IHDR")?.data;
+    if (!header) throw new Error("missing IHDR chunk");
+    return header;
+  });
   if (!ihdr.equals(otherIhdr)) throw new Error("blink frames don't match");
   let sequence = 0;
   const frameControl = () => {
@@ -164,11 +151,11 @@ const blinkImage = async (before: Buffer, after: Buffer) => {
     data.writeUInt16BE(1000, 22);
     return chunk("fcTL", data);
   };
+  // frames, and 0 plays so it loops forever
   const animation = Buffer.alloc(8);
   animation.writeUInt32BE(frames.length);
-  // and 0 plays, which loops forever
   return Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    PNG_SIGNATURE,
     chunk("IHDR", ihdr),
     chunk("acTL", animation),
     ...frames.flatMap((frame, i) => [
@@ -189,24 +176,28 @@ const blinkImage = async (before: Buffer, after: Buffer) => {
 
 type Manifest = Record<string, string>;
 
-// the store's latest commit, fetched with its file list but no contents
-const tip = () => {
+const fetchStore = (...extraArgs: string[]) => {
   try {
     git([
       "fetch",
       "--quiet",
-      "--depth=1",
+      ...extraArgs,
       "--filter=blob:none",
       "origin",
       `+${REF}:${REF}`,
     ]);
+    return true;
   } catch (error) {
-    const stderr = String((error as { stderr?: Buffer }).stderr);
-    if (stderr.includes("couldn't find remote ref")) return undefined;
+    if (stderrOf(error).includes("couldn't find remote ref")) return false;
     throw error;
   }
-  return { commit: git(["rev-parse", REF]).toString().trim() };
 };
+
+// the store's latest commit, fetched with its file list but no contents
+const tip = () =>
+  fetchStore("--depth=1")
+    ? { commit: git(["rev-parse", REF]).toString().trim() }
+    : undefined;
 
 // the baseline as of the commit a pull request branched off master, so what
 // master merged since isn't put on the pull request. master only makes a
@@ -214,13 +205,7 @@ const tip = () => {
 // commit or before it is exactly what master looked like there. this fetches
 // the store's whole history, still without contents
 const mergeBase = (head: string) => {
-  try {
-    git(["fetch", "--quiet", "--filter=blob:none", "origin", `+${REF}:${REF}`]);
-  } catch (error) {
-    const stderr = String((error as { stderr?: Buffer }).stderr);
-    if (stderr.includes("couldn't find remote ref")) return undefined;
-    throw error;
-  }
+  if (!fetchStore()) return undefined;
   const base = git(["merge-base", head, "origin/master"]).toString().trim();
   for (const line of git(["log", "--format=%H %s", REF])
     .toString()
@@ -228,11 +213,12 @@ const mergeBase = (head: string) => {
     // the pull requests' own screenshots are stored in between
     const [, commit, source] = line.match(/^(\w+) baseline from (\w+)$/) ?? [];
     if (!source) continue;
-    try {
-      git(["merge-base", "--is-ancestor", source, base]);
+    if (
+      spawnSync("git", ["merge-base", "--is-ancestor", source, base], {
+        stdio: "ignore",
+      }).status === 0
+    ) {
       return { commit };
-    } catch {
-      // made after the pull request branched off
     }
   }
   return undefined;
@@ -306,8 +292,9 @@ const store = (files: Map<string, Buffer>, message: string) => {
         git(["push", "--quiet", "origin", `${commit}:${REF}`]);
         return commit;
       } catch (error) {
-        const stderr = String((error as { stderr?: Buffer }).stderr);
-        if (!/rejected|fetch first|non-fast-forward/.test(stderr)) throw error;
+        if (!/rejected|fetch first|non-fast-forward/.test(stderrOf(error))) {
+          throw error;
+        }
       }
     }
   } finally {
@@ -326,16 +313,17 @@ const shots = new Map(
     }),
 );
 
-const parent =
-  BASELINE === "true" ? tip() : mergeBase(process.env.HEAD_SHA || "HEAD");
+const isBaseline = BASELINE === "true";
+const parent = isBaseline ? tip() : mergeBase(process.env.HEAD_SHA || "HEAD");
 const baseline = readManifest(parent?.commit);
-const noBaseline = BASELINE !== "true" && !Object.keys(baseline).length;
+const noBaseline = !isBaseline && !Object.keys(baseline).length;
 const changed = [...shots].filter(
   ([path, { hash }]) => baseline[path] && baseline[path] !== hash,
 );
 const added = [...shots].filter(([path]) => !baseline[path]);
 const removed = Object.keys(baseline).filter((path) => !shots.has(path));
 const unchanged = shots.size - changed.length - added.length;
+const hasChanges = Boolean(changed.length || added.length || removed.length);
 
 const files = new Map<string, Buffer>();
 for (const [, { data, hash }] of noBaseline ? [] : [...changed, ...added]) {
@@ -345,11 +333,13 @@ const blinks = new Map<string, string>();
 const changes = new Map<string, Change[]>();
 // master's report only goes to its step summary, the pull request already
 // showed these changes, so it skips the slow part
-const details = BASELINE !== "true";
+const details = !isBaseline;
 await Promise.all(
   (details ? changed : []).map(async ([path, { data, hash }]) => {
     const name = `blink/${baseline[path]}-${hash}.png`;
-    const before = read(parent?.commit as string, `img/${baseline[path]}.png`);
+    const before = parent
+      ? read(parent.commit, `img/${baseline[path]}.png`)
+      : undefined;
     if (!before)
       throw new Error(`no img/${baseline[path]}.png in refs/${IMAGES_REF}`);
     files.set(name, await blinkImage(before, data));
@@ -357,8 +347,7 @@ await Promise.all(
     changes.set(path, await changesBetween(before, data));
   }),
 );
-// a merge that changed no screenshot leaves the baseline alone
-if (BASELINE === "true" && (changed.length || added.length || removed.length)) {
+if (isBaseline && hasChanges) {
   const manifest = Object.fromEntries(
     [...shots].map(([path, { hash }]) => [path, hash]),
   );
@@ -371,7 +360,7 @@ if (BASELINE === "true" && (changed.length || added.length || removed.length)) {
 const commit = files.size
   ? store(
       files,
-      BASELINE === "true"
+      isBaseline
         ? `baseline from ${process.env.GITHUB_SHA}`
         : `screenshots for #${PR_NUMBER} at ${process.env.HEAD_SHA}`,
     )
@@ -402,9 +391,9 @@ const routes = new Map(
 const byRoute = <T>(items: T[], pathOf: (item: T) => string) => {
   const of = (item: T) => routes.get(pathOf(item).split("/")[0]);
   const sorted = [...items].sort(
-    (a, b) =>
-      (of(a)?.order ?? routes.size) - (of(b)?.order ?? routes.size) ||
-      pathOf(a).localeCompare(pathOf(b)),
+    (left, right) =>
+      (of(left)?.order ?? routes.size) - (of(right)?.order ?? routes.size) ||
+      pathOf(left).localeCompare(pathOf(right)),
   );
   const groups = new Map<string, T[]>();
   for (const item of sorted) {
@@ -434,19 +423,30 @@ const section = <T>(
     ]),
   ]);
 
-// changed screenshots that repeat changes already shown, or whose changes are
-// all tiny, are folded away so a review only looks at each change once
+const folded = (summary: string, body: string[]) => [
+  `<details><summary>${summary}</summary>`,
+  "",
+  ...body,
+  "</details>",
+  "",
+];
+
+const changedByRoute = byRoute(changed, ([path]) => path);
 const grouped = groupRepeats(
-  [...byRoute(changed, ([path]) => path).values()]
+  [...changedByRoute.values()]
     .flat()
     .map(([path]) => ({ item: path, changes: changes.get(path) ?? [] })),
 );
-const blinkOf = (path: string) => blinks.get(path) as string;
+const blinkOf = (path: string) => {
+  const blink = blinks.get(path);
+  if (!blink) throw new Error(`missing blink image for ${path}`);
+  return blink;
+};
 
 const lines = [MARKER, "## Screenshots", ""];
 if (noBaseline) {
   lines.push("No baseline to compare against yet, it's made when master runs.");
-} else if (!changed.length && !added.length && !removed.length) {
+} else if (!hasChanges) {
   lines.push(`No visual changes across ${shots.size} screenshots.`);
 } else {
   lines.push(
@@ -462,63 +462,61 @@ if (noBaseline) {
   );
   if (changed.length) {
     lines.push(
-      [...byRoute(changed, ([path]) => path)]
+      [...changedByRoute]
         .map(([route, group]) => `\`${route}\` ${group.length}`)
         .join(" · "),
       "",
     );
   }
-  if (details && changed.length) {
-    lines.push(...section(grouped.shown, (path) => path, blinkOf));
-  }
-  if (details && grouped.repeats.length) {
-    lines.push(
-      `<details><summary>Same changes as above (${grouped.repeats.length})</summary>`,
-      "",
-      ...section(
-        grouped.repeats,
-        ({ item }) => item,
-        ({ item }) => blinkOf(item),
-        ({ of }) => `Repeats ${name(of)}`,
-      ),
-      "</details>",
-      "",
-    );
-  }
-  if (details && grouped.tiny.length) {
-    lines.push(
-      `<details><summary>Tiny changes, possibly noise (${grouped.tiny.length})</summary>`,
-      "",
-      ...section(grouped.tiny, (path) => path, blinkOf),
-      "</details>",
-      "",
-    );
-  }
-  if (details && added.length) {
-    lines.push(
-      "<details><summary>New</summary>",
-      "",
-      ...section(
-        added,
-        ([path]) => path,
-        ([, { hash }]) => `img/${hash}.png`,
-      ),
-      "</details>",
-      "",
-    );
-  }
-  if (details && removed.length) {
-    lines.push(
-      "<details><summary>Removed</summary>",
-      "",
-      ...section(
-        removed,
-        (path) => path,
-        (path) => `img/${baseline[path]}.png`,
-      ),
-      "</details>",
-      "",
-    );
+  if (details) {
+    if (changed.length) {
+      lines.push(...section(grouped.shown, (path) => path, blinkOf));
+    }
+    if (grouped.repeats.length) {
+      lines.push(
+        ...folded(
+          `Same changes as above (${grouped.repeats.length})`,
+          section(
+            grouped.repeats,
+            ({ item }) => item,
+            ({ item }) => blinkOf(item),
+            ({ of }) => `Repeats ${name(of)}`,
+          ),
+        ),
+      );
+    }
+    if (grouped.tiny.length) {
+      lines.push(
+        ...folded(
+          `Tiny changes, possibly noise (${grouped.tiny.length})`,
+          section(grouped.tiny, (path) => path, blinkOf),
+        ),
+      );
+    }
+    if (added.length) {
+      lines.push(
+        ...folded(
+          "New",
+          section(
+            added,
+            ([path]) => path,
+            ([, { hash }]) => `img/${hash}.png`,
+          ),
+        ),
+      );
+    }
+    if (removed.length) {
+      lines.push(
+        ...folded(
+          "Removed",
+          section(
+            removed,
+            (path) => path,
+            (path) => `img/${baseline[path]}.png`,
+          ),
+        ),
+      );
+    }
   }
 }
 const report = lines.join("\n");
@@ -528,29 +526,38 @@ console.log(report);
 // one comment per pull request, edited in place. a pr that never changed a
 // screenshot doesn't get one
 if (PR_NUMBER) {
-  type Comment = { id: number; body: string; user: { type: string } };
-  let existing: Comment | undefined;
-  for (let page = 1; !existing; page++) {
-    const { data } = await github<Comment[]>(
-      `/issues/${PR_NUMBER}/comments?per_page=100&page=${page}`,
-    );
-    existing = data.find(
-      (c) => c.user.type === "Bot" && c.body.startsWith(MARKER),
-    );
-    if (data.length < 100) break;
-  }
+  const existing = gh([
+    "api",
+    "--paginate",
+    `repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments`,
+    "--jq",
+    `.[] | select(.user.type == "Bot" and (.body // "" | startswith("${MARKER}"))) | .id`,
+  ])
+    .trim()
+    .split("\n")[0];
   if (existing) {
-    await github(`/issues/comments/${existing.id}`, {
-      method: "PATCH",
-      body: { body: report },
-    });
-  } else if (
-    !noBaseline &&
-    (changed.length || added.length || removed.length)
-  ) {
-    await github(`/issues/${PR_NUMBER}/comments`, {
-      method: "POST",
-      body: { body: report },
-    });
+    gh(
+      [
+        "api",
+        "-X",
+        "PATCH",
+        `repos/${GITHUB_REPOSITORY}/issues/comments/${existing}`,
+        "--input",
+        "-",
+      ],
+      JSON.stringify({ body: report }),
+    );
+  } else if (!noBaseline && hasChanges) {
+    gh(
+      [
+        "api",
+        "-X",
+        "POST",
+        `repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments`,
+        "--input",
+        "-",
+      ],
+      JSON.stringify({ body: report }),
+    );
   }
 }
