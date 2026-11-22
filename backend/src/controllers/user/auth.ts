@@ -1,12 +1,6 @@
 import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import {
-  emailType,
-  getBatchFromEmail,
-  isAValidDegreeCombination,
-  namedDegreeZodList,
-  unknownDegree,
-} from "lib";
+import { emailType, getBatchFromEmail, unknownDegree } from "lib";
 import * as client from "openid-client";
 import { getConfig } from "../../config/authClient.js";
 import { env } from "../../config/server.js";
@@ -17,6 +11,7 @@ import {
   ZodFinishedUserSession,
   ZodUnfinishedUserSession,
 } from "../../types/auth.js";
+import { userDegreesSchema } from "../../types/user.js";
 import {
   clearAuthCookies,
   clearPkceCookies,
@@ -273,13 +268,8 @@ export async function getDegrees(req: Request, res: Response) {
     }
     const session = parsedSession.data;
 
-    if (
-      !namedDegreeZodList("user").min(1).safeParse(req.body.degrees).success ||
-      // the sentinel degree is assigned at signup, never picked here
-      req.body.degrees.includes(unknownDegree) ||
-      (req.body.degrees.length === 2 &&
-        !isAValidDegreeCombination(req.body.degrees))
-    ) {
+    const degrees = userDegreesSchema.safeParse(req.body.degrees);
+    if (!degrees.success) {
       return res.status(400).json({
         message: "cannot set degrees",
         error: "invalid set of degrees passed",
@@ -298,7 +288,7 @@ export async function getDegrees(req: Request, res: Response) {
 
     await createUserAndSession(
       res,
-      { name: session.name, email: session.email, degrees: req.body.degrees },
+      { name: session.name, email: session.email, degrees: degrees.data },
       session.maxAge,
     );
     res.json({
