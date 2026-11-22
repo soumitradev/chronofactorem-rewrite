@@ -68,14 +68,14 @@ export const databaseLogger = baseLogger.child(
 export class DatabaseLogger implements Logger {
   constructor(private readonly logger: PinoLogger) {}
 
-  logQuery(query: string, parameters?: any[], _queryRunner?: QueryRunner) {
+  logQuery(query: string, parameters?: unknown[], _queryRunner?: QueryRunner) {
     this.logger.debug({ query, parameters });
   }
 
   logQueryError(
     error: string,
     query: string,
-    parameters?: any[],
+    parameters?: unknown[],
     _queryRunner?: QueryRunner,
   ) {
     this.logger.error({ query, parameters, msg: `Query error: ${error}` });
@@ -84,7 +84,7 @@ export class DatabaseLogger implements Logger {
   logQuerySlow(
     time: number,
     query: string,
-    parameters?: any[],
+    parameters?: unknown[],
     _queryRunner?: QueryRunner,
   ) {
     this.logger.warn({ query, parameters, msg: `Query slow: ${time}` });
@@ -100,7 +100,7 @@ export class DatabaseLogger implements Logger {
 
   log(
     level: "log" | "info" | "warn",
-    message: any,
+    message: unknown,
     _queryRunner?: QueryRunner,
   ) {
     switch (level) {
