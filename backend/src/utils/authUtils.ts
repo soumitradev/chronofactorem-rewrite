@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import type { CookieOptions, Request, Response } from "express";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import { env } from "../config/server.js";
@@ -60,7 +60,7 @@ type SessionPayload =
 // signs a session bound to a fresh fingerprint, which goes in its own
 // httpOnly cookie so a leaked session cookie alone isn't enough
 export const mintSession = (payload: SessionPayload, maxAge: number) => {
-  const fingerprint = Math.random().toString(36).substring(2);
+  const fingerprint = randomBytes(32).toString("base64url");
   const token = signJWT(
     { ...payload, fingerprintHash: hashFingerprint(fingerprint) },
     maxAge,
