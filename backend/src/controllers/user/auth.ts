@@ -26,10 +26,27 @@ import {
   toTitleCase,
 } from "../../utils/authUtils.js";
 
+// expired sessions, or ones signed with a rotated key, count as logged out
+const hasValidSession = (req: Request) => {
+  try {
+    return readSession(req).ok;
+  } catch (error) {
+    if (error instanceof jwt.JsonWebTokenError) return false;
+    throw error;
+  }
+};
+
 // redirects to the logto sign in page
 export async function manageAuthRedirect(req: Request, res: Response) {
   const logger = req.log;
   try {
+    if (hasValidSession(req)) {
+      return res.redirect(env.FRONTEND_URL);
+    }
+    if (req.cookies.session || req.cookies.fingerprint) {
+      clearAuthCookies(res);
+    }
+
     const config = await getConfig();
     // pkce verifier and state are generated per request, and stashed in
     // short-lived cookies so the callback can verify the token exchange
@@ -47,16 +64,6 @@ export async function manageAuthRedirect(req: Request, res: Response) {
     };
 
     const authRedirect = client.buildAuthorizationUrl(config, parameters);
-
-    if (req.cookies.session && req.cookies.fingerprint) {
-      if (!readSession(req).ok) {
-        clearAuthCookies(res);
-        setPkceCookies(res, code_verifier, state);
-        return res.redirect(authRedirect.href);
-      }
-
-      return res.redirect(`${env.BACKEND_URL}/auth/callback`);
-    }
     setPkceCookies(res, code_verifier, state);
     return res.redirect(authRedirect.href);
   } catch (err) {
