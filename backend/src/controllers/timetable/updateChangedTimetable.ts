@@ -42,12 +42,12 @@ export const updateChangedTimetable = async (req: Request, res: Response) => {
       .createQueryBuilder()
       .update(Course)
       .set({
-        midsemStartTime: course?.midsemStartTime,
-        midsemEndTime: course?.midsemEndTime,
-        compreStartTime: course?.compreStartTime,
-        compreEndTime: course?.compreEndTime,
+        midsemStartTime: course.midsemStartTime,
+        midsemEndTime: course.midsemEndTime,
+        compreStartTime: course.compreStartTime,
+        compreEndTime: course.compreEndTime,
       })
-      .where("id = :id", { id: course?.id })
+      .where("id = :id", { id: course.id })
       .andWhere("archived = :archived", { archived: false })
       .execute();
 
@@ -61,7 +61,7 @@ export const updateChangedTimetable = async (req: Request, res: Response) => {
     const timetables: Timetable[] = await manager
       .createQueryBuilder(Timetable, "timetable")
       .leftJoinAndSelect("timetable.sections", "section")
-      .where("section.courseId = :id", { id: course?.id })
+      .where("section.courseId = :id", { id: course.id })
       .andWhere("timetable.archived = :archived", { archived: false })
       .getMany();
 
@@ -197,7 +197,7 @@ export const updateChangedTimetable = async (req: Request, res: Response) => {
       await manager
         .createQueryBuilder()
         .update(Section, { roomTime: section.roomTime })
-        .where("section.id = :id", { id: section?.id })
+        .where("section.id = :id", { id: section.id })
         .execute();
     }
   });
