@@ -84,18 +84,15 @@ function useCollapsingCards(timetables: Timetable[] | undefined) {
   }, [timetables]);
   const collapse = useCallback(
     (timetable: Timetable, section: SectionName, index: number) => {
-      // Wait out the dialog's close and the card's own focus return to ⋯,
-      // then move focus on unless the user has already put it elsewhere.
-      const moveFocus = focusAfterDelete(timetable.id);
-      setTimeout(() => {
-        const active = document.activeElement;
-        if (
-          active === null ||
-          active === document.body ||
-          active.closest(`[data-card-id="${timetable.id}"], [role=alertdialog]`)
-        )
-          moveFocus();
-      }, 80);
+      // the delete dialog has closed by now, so move focus on from it or the
+      // card unless the user has already put it elsewhere
+      const active = document.activeElement;
+      if (
+        active === null ||
+        active === document.body ||
+        active.closest(`[data-card-id="${timetable.id}"], [role=alertdialog]`)
+      )
+        focusAfterDelete(timetable.id)();
       setDeleted((prev) => new Set(prev).add(timetable.id));
       setLeaving((prev) =>
         new Map(prev).set(timetable.id, { timetable, section, index }),
