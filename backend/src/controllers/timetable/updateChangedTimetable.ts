@@ -68,17 +68,6 @@ export const updateChangedTimetable = async (req: Request, res: Response) => {
           course.code,
         );
 
-        // the request body carries exam dates as strings but
-        // checkForExamHoursClash compares Dates, same as during ingestion
-        if (course.compreStartTime !== null && course.compreEndTime !== null) {
-          course.compreStartTime = new Date(course.compreStartTime);
-          course.compreEndTime = new Date(course.compreEndTime);
-        }
-        if (course.midsemStartTime !== null && course.midsemEndTime !== null) {
-          course.midsemStartTime = new Date(course.midsemStartTime);
-          course.midsemEndTime = new Date(course.midsemEndTime);
-        }
-
         if (checkForExamHoursClash(timetable, course).clash) {
           for (const sec of timetable.sections) {
             await manager
