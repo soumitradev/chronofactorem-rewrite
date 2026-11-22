@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import { once } from "node:events";
 import { readdirSync, readFileSync } from "node:fs";
 import type { AddressInfo } from "node:net";
@@ -17,7 +16,7 @@ import {
 } from "../entity/entities.js";
 import { ingestJSON } from "../ingestJSON.js";
 import timetableJSON from "../timetable.json" with { type: "json" };
-import { hashFingerprint, signJWT } from "../utils/authUtils.js";
+import { mintSession } from "../utils/authUtils.js";
 import sqids from "../utils/sqids.js";
 
 // a seed scenario is a json file in ./scenarios describing a full db state:
@@ -128,17 +127,11 @@ export const seedScenario = async (scenario: Scenario) => {
       const id: string = identifiers[0].id;
       users[user.key] = id;
 
-      const fingerprint = randomBytes(16).toString("hex");
-      const session = signJWT(
-        {
-          id,
-          name: user.name,
-          email: user.email,
-          fingerprintHash: hashFingerprint(fingerprint),
-        },
+      const { token, fingerprint } = mintSession(
+        { id, name: user.name, email: user.email },
         60_000,
       );
-      const cookie = `session=${session}; fingerprint=${fingerprint}`;
+      const cookie = `session=${token}; fingerprint=${fingerprint}`;
 
       for (const timetable of user.timetables) {
         const { id } = await post<{ id: string }>(

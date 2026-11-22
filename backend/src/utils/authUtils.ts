@@ -2,6 +2,10 @@ import { createHash } from "node:crypto";
 import type { CookieOptions, Request, Response } from "express";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import { env } from "../config/server.js";
+import type {
+  FinishedUserSession,
+  UnfinishedUserSession,
+} from "../types/auth.js";
 
 const baseCookieOptions: CookieOptions = {
   domain: new URL(env.FRONTEND_URL).hostname,
@@ -32,7 +36,7 @@ export const setAuthCookies = (
   });
 };
 
-export const signJWT = (data: object, maxAge: number) => {
+const signJWT = (data: object, maxAge: number) => {
   return jwt.sign(data, Buffer.from(env.JWT_PRIVATE_KEY, "base64"), {
     algorithm: "RS256",
     // maxAge is in milliseconds, but jsonwebtoken reads expiresIn as seconds
@@ -46,8 +50,33 @@ export const verifyJWT = (token: string) => {
   });
 };
 
-export const hashFingerprint = (fingerprintCookie: string) =>
+const hashFingerprint = (fingerprintCookie: string) =>
   createHash("sha256").update(fingerprintCookie).digest("base64url");
+
+type SessionPayload =
+  | Omit<FinishedUserSession, "fingerprintHash">
+  | Omit<UnfinishedUserSession, "fingerprintHash">;
+
+// signs a session bound to a fresh fingerprint, which goes in its own
+// httpOnly cookie so a leaked session cookie alone isn't enough
+export const mintSession = (payload: SessionPayload, maxAge: number) => {
+  const fingerprint = Math.random().toString(36).substring(2);
+  const token = signJWT(
+    { ...payload, fingerprintHash: hashFingerprint(fingerprint) },
+    maxAge,
+  );
+  return { token, fingerprint };
+};
+
+export const issueSession = (
+  res: Response,
+  payload: SessionPayload,
+  maxAge: number,
+) => {
+  const { token, fingerprint } = mintSession(payload, maxAge);
+  clearAuthCookies(res);
+  setAuthCookies(res, token, fingerprint, maxAge);
+};
 
 type SessionRead =
   | {
