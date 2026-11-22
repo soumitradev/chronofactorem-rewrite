@@ -107,7 +107,7 @@ export function WeekGrid({
 }: WeekGridProps) {
   return (
     <div
-      // rows grow from 50px to 64px on tablets, where the tiles are wide
+      // bump row height from 50px to 64px on tablets because wider tiles fit larger text
       className="tt-week relative grid gap-x-[3px] gap-y-[5px] sm:gap-y-1.5 px-2.5 py-1 [--tt-row:50px] sm:[--tt-row:64px]"
       style={{
         gridTemplateColumns: `40px repeat(${dayCount}, minmax(0, 1fr))`,

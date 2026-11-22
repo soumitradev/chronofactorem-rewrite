@@ -70,7 +70,7 @@ export function TimetableSurface({
     state: { courseHues },
   } = useTimetableState();
   const { colorSeed } = useTheme();
-  // keep a removed course's hue while its tiles fade out
+  // keep track of last hues because removed courses drop from courseHues before their tiles finish fading out
   const lastHues = useRef(new Map<string, number>());
   useEffect(() => {
     for (const [code, hue] of courseHues) lastHues.current.set(code, hue);
@@ -81,7 +81,6 @@ export function TimetableSurface({
     const kinds = new Map(live.map((p) => [p.section.id, p.presence]));
     const liveGrid = buildTimetableGrid(live.map((p) => p.section));
     const goneGrid = buildTimetableGrid(gone.map((p) => p.section));
-    // a section's courseId holds its course code here
     const hueOf = (code: string) =>
       courseHues.get(code) ?? lastHues.current.get(code);
     // leaving cells go first so a replacement paints over the section it replaces
@@ -105,7 +104,7 @@ export function TimetableSurface({
       },
     };
   }, [presence, courseHues]);
-  // a ghost on Saturday or past the last hour grows the grid to fit
+  // recompute grid bounds because ghosts can add days/hours
   const { dayCount, hourCount } = useMemo(() => {
     if (!ghost.value) return base;
     const g = buildTimetableGrid([ghost.value]);

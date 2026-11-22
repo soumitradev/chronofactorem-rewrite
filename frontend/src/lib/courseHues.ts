@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-// eight hues ~45 deg apart; courses past 8 use the 8 hues halfway between them
+// space 8 primary hues ~45 deg apart and fall back to the 8 midpoints past 8 courses
 const PRIMARY_HUES = [12, 56, 96, 146, 195, 246, 296, 338] as const;
 const OVERFLOW_HUES = [34, 76, 121, 170, 220, 271, 317, 355] as const;
 const CHRONO_BIRTHDAY = 20230617; // chrono birthday!!!!
@@ -58,7 +58,6 @@ const pickNextHue = (hash: number, usedHues: number[]): number => {
     : topCandidates[hash % topCandidates.length];
 };
 
-// pick a distinct hue per course, keeping hues as far apart as possible for a given seed
 export const courseHues = (
   codes: Iterable<string>,
   seed = 0,

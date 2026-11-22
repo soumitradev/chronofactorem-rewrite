@@ -138,7 +138,7 @@ export function parseTiming(entry: string) {
 }
 
 export function buildTimingsPreview(timings: readonly string[]) {
-  // each filled slot's course code
+  // store the course code per slot so callers can tint each cell
   const filled = new Map<string, string>();
   let dayCount = 5;
   let hourCount = 9;

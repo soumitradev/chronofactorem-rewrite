@@ -30,7 +30,6 @@ const blockClass = "course-tint rounded-md border border-line bg-ev";
 const bodyClass =
   "flex w-full items-center justify-between gap-3 rounded-md px-3.5 py-2.5 text-left";
 
-// `remove` pads the right side where the editor's × sits so the room clears it
 function BlockBody({
   cell,
   remove = false,
@@ -38,6 +37,7 @@ function BlockBody({
   cell: TimetableCell;
   remove?: boolean;
 }) {
+  const roomPad = remove ? "pr-5" : ""; // clear the editor's × button
   return (
     <>
       <span className="min-w-0">
@@ -50,9 +50,7 @@ function BlockBody({
         </span>
       </span>
       <span
-        className={`shrink-0 text-right font-mono text-[15px] leading-none font-medium tracking-[-0.02em] text-ink ${
-          remove ? "pr-5" : ""
-        }`}
+        className={`shrink-0 text-right font-mono text-[15px] leading-none font-medium tracking-[-0.02em] text-ink ${roomPad}`}
       >
         {cell.room}
       </span>

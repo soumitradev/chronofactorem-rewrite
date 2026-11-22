@@ -6,9 +6,11 @@ env:
   FRONTEND_URL: ${DITTO_URL}
   BACKEND_URL: ${DITTO_URL}/api
   VITE_FRONTEND_URL: ${DITTO_URL}
+  NODE_ENV: development
+  LOGIN_AS: "true"
 hooks:
-  # A fresh preview's database is empty: load the course data.
-  after_start: docker compose --profile ingestion run --rm ingestion
+  # A fresh preview's database is empty: seed the starter-pack scenario (courses, users, timetables).
+  after_start: docker compose --profile seed run --rm seed starter-pack
 # The preview inspector files issues on the upstream repo, not this fork.
 inspector:
   issues: crux-bphc/chronofactorem-rewrite

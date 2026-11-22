@@ -216,7 +216,6 @@ const ColumnBlockLines = ({
   );
 };
 
-// live grid scales up at 1920/2560/3200px while export stays fixed; omits code when name fits
 function BlockLines({
   cell,
   scale,

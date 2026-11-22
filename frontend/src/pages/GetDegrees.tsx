@@ -53,17 +53,21 @@ function GetDegrees() {
     <div className="min-h-dvh flex flex-col text-ink">
       <CruxMark />
       <div className="mx-auto flex w-full max-w-[440px] flex-1 flex-col px-6 pt-16 lg:justify-center lg:pt-0">
-        <div className="flex-1 lg:flex-none lg:rounded-xl lg:border lg:border-line lg:bg-surface lg:p-7">
-          <h1 className="text-3xl font-normal tracking-[-0.03em]">Register</h1>
-          <div className="mt-6">
-            <DegreeDropDown
-              firstDegree={firstDegree}
-              secondDegree={secondDegree}
-              setFirstDegree={setFirstDegree}
-              setSecondDegree={setSecondDegree}
-              year={year}
-              showLabels
-            />
+        <div className="flex flex-1 flex-col lg:flex-none lg:rounded-xl lg:border lg:border-line lg:bg-surface lg:p-7">
+          <div className="flex-1 lg:flex-none">
+            <h1 className="text-3xl font-normal tracking-[-0.03em]">
+              Register
+            </h1>
+            <div className="mt-6">
+              <DegreeDropDown
+                firstDegree={firstDegree}
+                secondDegree={secondDegree}
+                setFirstDegree={setFirstDegree}
+                setSecondDegree={setSecondDegree}
+                year={year}
+                showLabels
+              />
+            </div>
           </div>
           <div className="pt-6 lg:pt-7">
             <Button
