@@ -1,8 +1,5 @@
-import * as React from "react";
+import type * as React from "react";
 import { cn } from "@/lib/utils";
-
-const reducedMotion = () =>
-  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 export function Collapse({
   open,
@@ -13,50 +10,31 @@ export function Collapse({
   open: boolean;
   children: React.ReactNode;
   onExited?: () => void;
+  // mount expanded, then transition to `open`
   appearOpen?: boolean;
 }) {
-  // With appearOpen, mount expanded and let the closing play on the next frame.
-  const [settled, setSettled] = React.useState(!appearOpen);
-  React.useEffect(() => {
-    if (settled) return;
-    let second = 0;
-    const first = requestAnimationFrame(() => {
-      second = requestAnimationFrame(() => setSettled(true));
-    });
-    return () => {
-      cancelAnimationFrame(first);
-      cancelAnimationFrame(second);
-    };
-  }, [settled]);
-  const expanded = settled ? open : true;
-
-  const exitedRef = React.useRef(onExited);
-  exitedRef.current = onExited;
-  React.useEffect(() => {
-    if (!open && settled && reducedMotion()) exitedRef.current?.();
-  }, [open, settled]);
-
   return (
     <div
       className={cn(
         "grid transition-[grid-template-rows,opacity] duration-(--d-2) ease-(--e-out)",
-        expanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+        open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+        appearOpen && "starting:grid-rows-[1fr] starting:opacity-100",
       )}
+      // still fires under reduced motion, whose transitions last 0.01ms
       onTransitionEnd={(e) => {
         if (
           e.target === e.currentTarget &&
           e.propertyName === "grid-template-rows" &&
-          !open &&
-          !reducedMotion()
+          !open
         ) {
-          exitedRef.current?.();
+          onExited?.();
         }
       }}
     >
       <div
         className="min-h-0 overflow-hidden"
-        inert={!expanded}
-        aria-hidden={!expanded || undefined}
+        inert={!open}
+        aria-hidden={!open || undefined}
       >
         {children}
       </div>
