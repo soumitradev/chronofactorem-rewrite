@@ -105,15 +105,11 @@ export const readSession = (req: Request): SessionRead => {
   return { ok: true, payload };
 };
 
-export const toTitleCase = (str: string | undefined) => {
-  if (str === undefined) {
-    return "";
-  }
-  return str
+export const toTitleCase = (str: string) =>
+  str
     .split(" ")
     .map((s) => s[0].toUpperCase() + s.substring(1).toLowerCase())
     .join(" ");
-};
 
 const PKCE_COOKIE_MAX_AGE_MS = 10 * 60 * 1000; // 10 minutes
 
