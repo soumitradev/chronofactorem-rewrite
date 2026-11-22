@@ -110,9 +110,6 @@ export async function authCallback(req: Request, res: Response) {
         tokenSet.claims()?.sub || "",
       );
 
-      // tokenSet.claims() returns validated information contained upon accessing the token
-      const _tokenExpiryTime = tokenSet.claims()?.exp;
-
       // defines maxAge according to env vars
       const maxAge = env.SESSION_MAX_AGE_MS; // converts into milliseconds
 
@@ -187,10 +184,11 @@ async function startSession(
   }
 
   issueSession(res, { name, email, maxAge }, maxAge);
-  const yearOfStudy =
-    timetableJSON.metadata.acadYear - Number.parseInt(batch, 10) + 1;
-  res.redirect(`${env.FRONTEND_URL}/getDegrees?year=${yearOfStudy}`);
+  res.redirect(`${env.FRONTEND_URL}/getDegrees?year=${yearOfStudy(batch)}`);
 }
+
+const yearOfStudy = (batch: string) =>
+  timetableJSON.metadata.acadYear - Number.parseInt(batch, 10) + 1;
 
 async function createUserAndSession(
   res: Response,
@@ -280,13 +278,14 @@ export async function getDegrees(req: Request, res: Response) {
       });
     }
 
-    if (!ZodUnfinishedUserSession.safeParse(read.payload).success) {
+    const parsedSession = ZodUnfinishedUserSession.safeParse(read.payload);
+    if (!parsedSession.success) {
       return res.status(401).json({
         message: "cannot set degrees",
         error: "user session malformed",
       });
     }
-    const session = ZodUnfinishedUserSession.parse(read.payload);
+    const session = parsedSession.data;
 
     if (
       !namedDegreeZodList("user").min(1).safeParse(req.body.degrees).success ||
@@ -363,8 +362,9 @@ export async function checkAuthStatus(req: Request, res: Response) {
     }
     const sessionData = read.payload;
 
-    if (ZodUnfinishedUserSession.safeParse(sessionData).success) {
-      const session = ZodUnfinishedUserSession.parse(sessionData);
+    const unfinishedSession = ZodUnfinishedUserSession.safeParse(sessionData);
+    if (unfinishedSession.success) {
+      const session = unfinishedSession.data;
       const user = await userRepository
         .createQueryBuilder()
         .select()
@@ -381,17 +381,10 @@ export async function checkAuthStatus(req: Request, res: Response) {
         });
       }
 
-      const batch = getBatchFromEmail(sessionData.email);
-
-      // same 0000 sentinel handling as the auth callback redirect
-      const yearOfStudy =
-        batch === "0000"
-          ? 1
-          : timetableJSON.metadata.acadYear - Number.parseInt(batch, 10) + 1;
-
+      // 0000 users are created at signup, so only f-batch users get here
       return res.json({
         message: "user needs to get degrees",
-        redirect: `/getDegrees?year=${yearOfStudy}`,
+        redirect: `/getDegrees?year=${yearOfStudy(getBatchFromEmail(session.email))}`,
       });
     }
 
