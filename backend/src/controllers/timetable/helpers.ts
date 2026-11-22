@@ -40,6 +40,8 @@ export const findTimetableById = (id: number, withSections: boolean) =>
     relations: { sections: withSections },
   });
 
+export type TimetableContext = { author: User; timetable: Timetable };
+
 type TimetableContextOptions = {
   withSections?: boolean;
   draftOnly?: boolean;
@@ -53,7 +55,7 @@ export const loadTimetableContext = async (
   req: Request,
   res: Response,
   options: TimetableContextOptions = {},
-): Promise<{ author: User; timetable: Timetable } | null> => {
+): Promise<TimetableContext | null> => {
   const id = decodeTimetableSqidOr404(req, res);
   if (id === null) {
     return null;
