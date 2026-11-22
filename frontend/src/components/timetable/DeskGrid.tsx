@@ -294,10 +294,21 @@ export function DeskGrid({
 }: DeskGridProps) {
   const rows = orientation === "rows";
   // a cell's place: days down the side and hours across, or transposed
-  const place = (day: number, hour: number, span = 1) =>
+  const place = ({
+    day,
+    hour,
+    span,
+  }: Pick<TimetableCell, "day" | "hour" | "span">) =>
     rows
       ? { gridRow: day + 2, gridColumn: `${hour + 2} / span ${span}` }
       : { gridColumn: day + 2, gridRow: `${hour + 2} / span ${span}` };
+  const pad = (cell: TimetableCell, scale: boolean) =>
+    padClass(!rows && cell.span === 1, scale);
+  const body = (cell: TimetableCell, scale: boolean) => (
+    <div className={pad(cell, scale)}>
+      <BlockLines cell={cell} scale={scale} rows={rows} />
+    </div>
+  );
   const days = timetableDayNames.slice(0, dayCount);
   const hours = Array.from({ length: hourCount }, (_, h) => h);
 
@@ -370,35 +381,14 @@ export function DeskGrid({
         />
       )}
       {cells.map((cell) => {
-        const key = `${cell.id}-${cell.day}-${cell.hour}`;
-        const style = {
-          ...place(cell.day, cell.hour, cell.span),
-          ...hueStyle(cell.hue),
-        };
-        if (mode === "export") {
-          return (
-            <div
-              key={key}
-              style={style}
-              data-presence="present"
-              className={
-                "@container course-tint relative z-1 min-w-0 overflow-hidden rounded-md border border-line bg-ev"
-              }
-            >
-              <div className={padClass(!rows && cell.span === 1, false)}>
-                <BlockLines cell={cell} scale={false} rows={rows} />
-              </div>
-            </div>
-          );
-        }
         const edit = mode === "edit";
         const leaving = cell.presence === "leaving";
         const going = !leaving && cell.id === outgoing;
         const block = blockProps(cell, mode);
         return (
           <div
-            key={key}
-            style={{ ...place(cell.day, cell.hour, cell.span), ...block.style }}
+            key={`${cell.id}-${cell.day}-${cell.hour}`}
+            style={{ ...place(cell), ...block.style }}
             data-presence={cell.presence ?? "present"}
             data-outgoing={going ? "" : undefined}
             inert={leaving}
@@ -408,29 +398,31 @@ export function DeskGrid({
               edit ? "hover:border-ink/40 hover:bg-ev-hover" : ""
             }`}
           >
-            <Tooltip delayDuration={200}>
-              <TooltipTrigger asChild>
-                {edit ? (
-                  <OpenButton
-                    cell={cell}
-                    disabled={pending || leaving}
-                    onOpen={onOpen}
-                    onRemove={onRemove}
-                    className={`rounded-md text-left ${padClass(!rows && cell.span === 1, true)}`}
-                  >
-                    <BlockLines cell={cell} scale rows={rows} remove />
-                  </OpenButton>
-                ) : (
-                  <div className={padClass(!rows && cell.span === 1, true)}>
-                    <BlockLines cell={cell} scale rows={rows} />
-                  </div>
-                )}
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{titleCase(cell.name)}</p>
-                {edit && <p className="opacity-75">(Double tap to remove)</p>}
-              </TooltipContent>
-            </Tooltip>
+            {mode === "export" ? (
+              body(cell, false)
+            ) : (
+              <Tooltip delayDuration={200}>
+                <TooltipTrigger asChild>
+                  {edit ? (
+                    <OpenButton
+                      cell={cell}
+                      disabled={pending || leaving}
+                      onOpen={onOpen}
+                      onRemove={onRemove}
+                      className={`rounded-md text-left ${pad(cell, true)}`}
+                    >
+                      <BlockLines cell={cell} scale rows={rows} remove />
+                    </OpenButton>
+                  ) : (
+                    body(cell, true)
+                  )}
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{titleCase(cell.name)}</p>
+                  {edit && <p className="opacity-75">(Double tap to remove)</p>}
+                </TooltipContent>
+              </Tooltip>
+            )}
             {edit && (
               <RemoveButton
                 cell={cell}
@@ -451,17 +443,10 @@ export function DeskGrid({
             data-ghost=""
             data-visible={ghostVisible ? "" : undefined}
             aria-hidden="true"
-            style={{
-              ...place(cell.day, cell.hour, cell.span),
-              ...hueStyle(cell.hue),
-            }}
-            className={
-              "@container course-tint tt-ghost pointer-events-none relative z-2 min-w-0 overflow-hidden rounded-md"
-            }
+            style={{ ...place(cell), ...hueStyle(cell.hue) }}
+            className="@container course-tint tt-ghost pointer-events-none relative z-2 min-w-0 overflow-hidden rounded-md"
           >
-            <div className={padClass(!rows && cell.span === 1, true)}>
-              <BlockLines cell={cell} scale rows={rows} />
-            </div>
+            {body(cell, true)}
           </div>
         ))}
       {now}
