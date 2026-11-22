@@ -18,7 +18,7 @@ export const clearAuthCookies = (res: Response) => {
   res.clearCookie("session", { ...baseCookieOptions, httpOnly: false });
 };
 
-export const setAuthCookies = (
+const setAuthCookies = (
   res: Response,
   token: string,
   fingerprint: string,
@@ -44,7 +44,7 @@ const signJWT = (data: object, maxAge: number) => {
   });
 };
 
-export const verifyJWT = (token: string) => {
+const verifyJWT = (token: string) => {
   return jwt.verify(token, Buffer.from(env.JWT_PUBLIC_KEY, "base64"), {
     algorithms: ["RS256"],
   });
