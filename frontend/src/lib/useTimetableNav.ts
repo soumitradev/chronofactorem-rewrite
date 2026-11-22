@@ -1,4 +1,9 @@
-import { useNavigate, useRouter, useSearch } from "@tanstack/react-router";
+import {
+  type HistoryState,
+  useNavigate,
+  useRouter,
+  useSearch,
+} from "@tanstack/react-router";
 import { useCallback, useMemo } from "react";
 import type { TimetableSearch } from "./timetableSearch";
 import {
@@ -9,13 +14,6 @@ import {
 } from "./viewTransitions";
 
 type SectionType = "L" | "P" | "T";
-
-type NavState = {
-  chronoNav?: boolean;
-  sheetDepth?: number;
-  // The sheet was already open on the entry below the first push (deep link).
-  sheetDeepRoot?: boolean;
-};
 
 const stripSheet = ({
   sheet: _s,
@@ -40,18 +38,17 @@ export function useTimetableNav() {
   const navigate = useNavigate();
   const router = useRouter();
 
-  // The route is not known statically here (edit and view share this hook),
-  // so navigate relative to the current location and loosen the typing.
+  // edit and view share this hook, so navigate relative to the current route
   const go = useCallback(
     async (
       update: (prev: TimetableSearch) => TimetableSearch,
       opts: { push: boolean; transition?: SurfaceTransition },
     ) => {
-      let state: NavState | true = true;
+      let state: HistoryState | true = true;
       if (opts.push) {
         const cur = router.latestLocation;
         const curSearch = cur.search as TimetableSearch;
-        const curState = cur.state as NavState;
+        const curState = cur.state;
         const next = update(curSearch);
         state = next.sheet
           ? {
@@ -65,9 +62,9 @@ export function useTimetableNav() {
             }
           : { chronoNav: true };
       }
-      // biome-ignore lint/suspicious/noExplicitAny: shared by two routes
-      await (navigate as any)({
-        search: update,
+      await navigate({
+        to: ".",
+        search: (prev) => update(prev as TimetableSearch),
         // Search-only changes keep the page where it is.
         resetScroll: false,
         state,
@@ -91,7 +88,7 @@ export function useTimetableNav() {
       strip: (prev: TimetableSearch) => TimetableSearch,
       transition?: SurfaceTransition,
     ) => {
-      if ((router.latestLocation.state as NavState).chronoNav) {
+      if (router.latestLocation.state.chronoNav) {
         // the pop is animated by the router's default transition
         router.history.back();
       } else {
@@ -130,7 +127,7 @@ export function useTimetableNav() {
       },
       closeSheet: () => {
         const loc = router.latestLocation;
-        const { sheetDepth, sheetDeepRoot } = loc.state as NavState;
+        const { sheetDepth, sheetDeepRoot } = loc.state;
         if (!sheetDepth || !loc.search.sheet) {
           back(stripSheet);
           return;
