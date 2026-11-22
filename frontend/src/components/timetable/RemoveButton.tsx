@@ -2,11 +2,8 @@ import { X } from "lucide-react";
 import { HapticTap, haptic } from "@/lib/haptics";
 import type { TimetableCell } from "@/utils/timetableGrid";
 
-/**
- * The editor's × on a phone block or tile. It is a sibling of the block's
- * open button, laid over its top-right corner (the block must be `relative`);
- * `className` places and sizes it and sets the hit area its ::after adds.
- */
+// a sibling of the block's open button, laid over its top-right corner (the
+// block must be `relative`); `className` places it and sizes its ::after hit area
 export function RemoveButton({
   cell,
   disabled,

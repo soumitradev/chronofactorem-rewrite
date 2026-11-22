@@ -1,4 +1,3 @@
-import { X } from "lucide-react";
 import { TileBody } from "@/components/timetable/WeekGrid";
 import {
   Tooltip,
@@ -16,6 +15,7 @@ import {
 } from "@/utils/timetableGrid";
 import { EmptyState, emptyTimetableHint } from "./EmptyState";
 import { OpenButton } from "./OpenButton";
+import { RemoveButton } from "./RemoveButton";
 
 type DeskGridProps = {
   cells: TimetableCell[];
@@ -432,15 +432,14 @@ export function DeskGrid({
               </TooltipContent>
             </Tooltip>
             {edit && (
-              <button
-                type="button"
+              <RemoveButton
+                cell={cell}
                 disabled={pending || leaving}
-                aria-label={`Remove ${cell.code} ${cell.type}${cell.number}`}
-                onClick={leaving ? undefined : () => onRemove?.(cell)}
-                className="absolute top-1 right-1 flex size-5 cursor-pointer items-center justify-center rounded-sm text-ink-muted transition-colors duration-(--d-1) hover:bg-ev-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-default"
-              >
-                <X size={13} />
-              </button>
+                onRemove={onRemove}
+                iconSize={13}
+                className="top-1 right-1 size-5 hover:bg-ev-hover"
+                hitClassName="size-5"
+              />
             )}
           </div>
         );
