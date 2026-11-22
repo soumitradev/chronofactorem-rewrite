@@ -74,7 +74,7 @@ const DegreeDropDown = ({
   const firstId = useId();
   const secondId = useId();
   const showSecond =
-    firstDegree?.includes("B") && (year === undefined || year > 2);
+    firstDegree?.includes("B") && (year === undefined || year >= 2);
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-1.5">
