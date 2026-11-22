@@ -82,27 +82,19 @@ const authenticatedRoute = new Route({
   id: "authenticated",
   getParentRoute: () => rootRoute,
   beforeLoad: async ({ context: { queryClient } }) => {
-    try {
-      await queryClient.ensureQueryData(authStatusQueryOptions);
-    } catch (e) {
-      if (e instanceof AxiosError && e.response) {
+    const status = await queryClient
+      .ensureQueryData(authStatusQueryOptions)
+      .catch((e) => {
         if (
-          e.response.status === 200 &&
-          e.response.data.message === "user needs to get degrees"
-        ) {
-          throw redirect({
-            to: e.response.data.redirect,
-          });
-        }
-        if (e.response.status === 401 || e.response.status === 500) {
-          throw redirect({
-            to: "/login",
-          });
-        }
-      } else {
+          e instanceof AxiosError &&
+          (e.response?.status === 401 || e.response?.status === 500)
+        )
+          throw redirect({ to: "/login" });
         throw e;
-      }
-    }
+      });
+    // the backend sends this with a 200, so it never reaches the catch
+    if (status.message === "user needs to get degrees" && status.redirect)
+      throw redirect({ to: status.redirect });
   },
   component: Outlet,
 });
