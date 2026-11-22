@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-router";
 import { useCallback, useMemo } from "react";
 import type { TimetableSearch } from "./timetableSearch";
+import { matchesDesktop } from "./useIsDesktop";
 import {
   markSheetClosing,
   prefersReducedMotion,
@@ -23,16 +24,16 @@ const stripSheet = ({
   ...rest
 }: TimetableSearch): TimetableSearch => rest;
 
-const isPhone = () => !window.matchMedia("(min-width: 1024px)").matches;
+const stripCourse = ({
+  course: _c,
+  type: _t,
+  ...rest
+}: TimetableSearch): TimetableSearch => rest;
 
-/**
- * Editor/view navigation state lives in URL search params so the browser and
- * phone back button walk back through sheets and courses. Opening a sheet or
- * another course pushes; everything else (section types included) replaces.
- *
- * Pushed entries record how many entries deep into the open sheet they are
- * (`sheetDepth`), so closing the sheet can pop all of them in one go.
- */
+// Editor and view navigation lives in search params, so back walks through
+// sheets and courses. Opening a sheet or another course pushes; everything
+// else replaces. Pushes record their `sheetDepth`, so closing the sheet pops
+// all of them in one go
 export function useTimetableNav() {
   const search = useSearch({ strict: false }) as TimetableSearch;
   const navigate = useNavigate();
@@ -48,15 +49,14 @@ export function useTimetableNav() {
       if (opts.push) {
         const cur = router.latestLocation;
         const curSearch = cur.search as TimetableSearch;
-        const curState = cur.state;
         const next = update(curSearch);
         state = next.sheet
           ? {
               chronoNav: true,
-              sheetDepth: curSearch.sheet ? (curState.sheetDepth ?? 0) + 1 : 1,
+              sheetDepth: curSearch.sheet ? (cur.state.sheetDepth ?? 0) + 1 : 1,
               sheetDeepRoot: curSearch.sheet
-                ? curState.sheetDepth
-                  ? curState.sheetDeepRoot
+                ? cur.state.sheetDepth
+                  ? cur.state.sheetDeepRoot
                   : true
                 : undefined,
             }
@@ -65,12 +65,10 @@ export function useTimetableNav() {
       await navigate({
         to: ".",
         search: (prev) => update(prev as TimetableSearch),
-        // Search-only changes keep the page where it is.
         resetScroll: false,
         state,
-        // A typed surface transition, or none. Only history pops fall through
-        // to the router default (`routeTransitionTypes`), so in-app moves that
-        // a caller already wraps in a transition never start a second one.
+        // only history pops fall through to the router default, so a move a
+        // caller already animates never starts a second transition
         viewTransition:
           opts.transition &&
           !prefersReducedMotion() &&
@@ -98,26 +96,23 @@ export function useTimetableNav() {
     [router, go],
   );
 
-  // Pushes the bare course list, so back from a course opened over a closed
-  // sheet returns to the list before closing.
-  const pushSheetIfClosed = useCallback(async () => {
-    if (!router.latestLocation.search.sheet) {
-      await go(
-        ({ course: _c, type: _t, ...p }) => ({
-          ...p,
-          sheet: "courses" as const,
-        }),
-        { push: true },
-      );
-    }
-  }, [router, go]);
+  return useMemo(() => {
+    // phone: tabs and courses show inside the courses sheet, so moving to one
+    // pushes the sheet unless it is already showing
+    const coursesSheet = () => {
+      const phone = !matchesDesktop();
+      return {
+        phone,
+        sheet: phone ? { sheet: "courses" as const } : {},
+        closed: phone && router.latestLocation.search.sheet !== "courses",
+      };
+    };
 
-  return useMemo(
-    () => ({
+    return {
       search,
       openSheet: (sheet: "courses" | "warnings") => {
         if (router.latestLocation.search.sheet === sheet) return;
-        if (sheet === "warnings" && isPhone()) {
+        if (sheet === "warnings" && !matchesDesktop()) {
           return go(
             ({ course: _c, type: _t, q: _q, ...p }) => ({ ...p, sheet }),
             { push: true },
@@ -133,20 +128,19 @@ export function useTimetableNav() {
           return;
         }
         if (sheetDeepRoot) {
-          // The entry we land on was deep-linked with the sheet open; strip
-          // it in place once the history move has resolved.
+          // the entry we land on was deep-linked with the sheet open, so
+          // remove it in place once the history move resolves
           let timer: ReturnType<typeof setTimeout> | undefined;
           const unsub = router.subscribe("onResolved", () => {
             clearTimeout(timer);
             unsub();
-            go(stripSheet, { push: false, transition: undefined });
+            go(stripSheet, { push: false });
           });
-          // don't leave a stray listener behind if the move never resolves,
-          // and never leave the URL claiming a sheet the user just closed
+          // never leave a stray listener, or a URL claiming a closed sheet
           timer = setTimeout(() => {
             unsub();
             if (router.latestLocation.search.sheet)
-              go(stripSheet, { push: false, transition: undefined });
+              go(stripSheet, { push: false });
           }, 1000);
           markSheetClosing();
         }
@@ -157,61 +151,41 @@ export function useTimetableNav() {
       setExam: (exam: "midsem" | "compre") =>
         go((p) => ({ ...p, exam }), { push: false }),
       showTab: async (tab: NonNullable<TimetableSearch["tab"]>) => {
-        const phone = isPhone();
-        // Phone: the tab lives inside the courses sheet. Unless that sheet is
-        // already showing, push it (from no sheet or from warnings) so back
-        // returns to where the user was instead of leaving the editor.
-        await go(
-          ({ course: _c, type: _t, ...rest }) => ({
-            ...rest,
-            tab,
-            ...(phone ? { sheet: "courses" as const } : {}),
-          }),
-          {
-            push: phone && router.latestLocation.search.sheet !== "courses",
-          },
-        );
+        const { sheet, closed } = coursesSheet();
+        // pushed from no sheet or from warnings, so back returns there
+        await go((p) => ({ ...stripCourse(p), tab, ...sheet }), {
+          push: closed,
+        });
       },
-      openCourse: async (
-        courseId: string,
-        type?: SectionType,
-        tab?: NonNullable<TimetableSearch["tab"]>,
-      ) => {
-        const phone = isPhone();
-        const cur = router.latestLocation.search;
-        // A `type` deep-links a section type (timetable blocks, clash pills);
-        // without one the default type shows, or the course's current type if
-        // it is already open.
+      openCourse: async (courseId: string, type?: SectionType) => {
+        const { phone, sheet, closed } = coursesSheet();
+        // a `type` deep-links a section type; without one the default type
+        // shows, or the current one if this course is already open
         const update = (p: TimetableSearch): TimetableSearch => ({
           ...p,
           course: courseId,
           type: type ?? (p.course === courseId ? p.type : undefined),
-          ...(tab ? { tab } : {}),
-          ...(phone ? { sheet: "courses" as const } : {}),
+          ...sheet,
         });
-        // Already showing this course: switch type in place, no new entry, so
-        // back returns to the previous course rather than the previous type.
-        // On a phone it only shows inside the courses sheet; `course` alone
-        // (say, carried over from desktop) still needs the sheet opened.
-        if (cur.course === courseId && (!phone || cur.sheet === "courses")) {
+        // already showing this course: switch type in place, so back returns
+        // to the previous course rather than the previous type
+        if (router.latestLocation.search.course === courseId && !closed) {
           await go(update, { push: false });
           return;
         }
-        // Phone: the course lives inside the courses sheet. If the sheet is
-        // closed, push the list first so back returns to it before closing.
-        // From the warnings sheet the course is pushed straight over it, so
-        // back returns to Warnings.
-        if (phone) await pushSheetIfClosed();
+        // a closed sheet pushes the list first, so back returns to it before
+        // closing. Over warnings the course is pushed straight on top
+        if (phone && !router.latestLocation.search.sheet)
+          await go((p) => ({ ...stripCourse(p), sheet: "courses" }), {
+            push: true,
+          });
         await go(update, { push: true });
       },
-      closeCourse: () =>
-        back(({ course: _c, type: _t, ...rest }) => rest, "panel-back"),
+      closeCourse: () => back(stripCourse, "panel-back"),
       setType: (type: SectionType) =>
         go((p) => ({ ...p, type }), { push: false }),
       setView: (view: "day" | "week", transition?: SurfaceTransition) =>
         go((p) => ({ ...p, view }), { push: false, transition }),
-      setDay: (day: number, transition?: SurfaceTransition) =>
-        go((p) => ({ ...p, day }), { push: false, transition }),
       showDay: (day: number, transition?: SurfaceTransition) =>
         go((p) => ({ ...p, view: "day" as const, day }), {
           push: false,
@@ -221,7 +195,6 @@ export function useTimetableNav() {
         go(({ q: _q, ...rest }) => (q ? { ...rest, q } : rest), {
           push: false,
         }),
-    }),
-    [search, go, back, router, pushSheetIfClosed],
-  );
+    };
+  }, [search, go, back, router]);
 }
