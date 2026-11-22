@@ -1,5 +1,6 @@
 import { useIsMutating } from "@tanstack/react-query";
 import { createLazyRoute } from "@tanstack/react-router";
+import { isAValidSectionType } from "lib";
 import { useEffect, useMemo } from "react";
 import CourseDetailsMenu from "@/components/CourseDetailsMenu";
 import ReportIssue from "@/components/ReportIssue";
@@ -145,11 +146,10 @@ function EditTimetable() {
         outgoing={outgoing}
         pending={pending}
         onOpen={(e, event) => {
-          if (!e?.courseId || !e.type) return;
+          if (!e?.courseId || !e.type || !isAValidSectionType(e.type)) return;
           if (event.detail <= 1) {
-            openCourse(courses.filter((x) => x.code === e.courseId)[0].id, {
-              type: e.type as "L" | "P" | "T",
-            });
+            const courseId = courses.find((c) => c.code === e.courseId)?.id;
+            if (courseId) openCourse(courseId, { type: e.type });
           } else if (e.id) {
             sectionAction({ sectionId: e.id, action: "remove" });
           }
