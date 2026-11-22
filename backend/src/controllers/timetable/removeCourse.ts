@@ -1,19 +1,16 @@
 import type { Request, Response } from "express";
 import { namedUUIDType, timetableIDType } from "lib";
 import { z } from "zod";
-import { Timetable } from "../../entity/entities.js";
 import { validate } from "../../middleware/zodValidateRequest.js";
 import {
   courseRepository,
   sectionRepository,
-  timetableRepository,
 } from "../../repositories/index.js";
-import {
-  removeCourseExamTimes,
-  removeSectionFromTimetable,
-  updateSectionWarnings,
-} from "../../utils/timetableDomain.js";
 import { getCourseSectionTypes, loadTimetableContext } from "./helpers.js";
+import {
+  applyRemoveSection,
+  persistTimetableSectionDelta,
+} from "./sectionChanges.js";
 
 const dataSchema = z.object({
   body: z.object({
@@ -26,9 +23,7 @@ const dataSchema = z.object({
 
 export const removeCourseValidator = validate(dataSchema);
 
-// same end state as removing each section in turn, in one transaction
 export const removeCourse = async (req: Request, res: Response) => {
-  const logger = req.log;
   const courseId = req.body.courseId;
 
   const context = await loadTimetableContext(req, res, {
@@ -38,14 +33,12 @@ export const removeCourse = async (req: Request, res: Response) => {
   if (!context) {
     return;
   }
-  const { author, timetable } = context;
+  const { timetable } = context;
 
   const course = await courseRepository.findOneBy({ id: courseId });
-
   if (!course) {
     return res.status(404).json({ message: "course not found" });
   }
-
   if (course.archived) {
     return res.status(418).json({ message: "course is archived" });
   }
@@ -53,7 +46,6 @@ export const removeCourse = async (req: Request, res: Response) => {
   const courseSections = timetable.sections.filter(
     (section) => section.courseId === courseId,
   );
-
   if (courseSections.length === 0) {
     return res.status(404).json({
       message: "Course not part of given timetable",
@@ -64,53 +56,18 @@ export const removeCourse = async (req: Request, res: Response) => {
     sectionRepository.manager,
     courseId,
   );
-
-  timetable.examTimes = removeCourseExamTimes(timetable.examTimes, course.code);
-
   for (const section of courseSections) {
-    removeSectionFromTimetable(timetable, section);
-
-    try {
-      timetable.warnings = updateSectionWarnings(
-        course.code,
-        section,
-        sectionTypes,
-        false,
-        timetable.warnings,
-      );
-    } catch (_err: any) {
-      logger.error(
-        `user with id ${author.id} tried to remove section ${section.type}${section.number} of course ${course.code} but it isn't part of their timetable according to warnings`,
-      );
-
-      return res.status(500).json({
-        message:
-          "Timetable and warnings state inconsistent, please contact us if you see this",
-      });
+    if (
+      !applyRemoveSection(req, res, context, { course, section, sectionTypes })
+    ) {
+      return;
     }
   }
 
-  await timetableRepository.manager.transaction(
-    async (transactionalEntityManager) => {
-      await transactionalEntityManager
-        .createQueryBuilder()
-        .relation(Timetable, "sections")
-        .of(timetable)
-        .remove(courseSections);
-
-      await transactionalEntityManager
-        .createQueryBuilder()
-        .update(Timetable)
-        .set({
-          timings: timetable.timings,
-          examTimes: timetable.examTimes,
-          warnings: timetable.warnings,
-        })
-        .where("timetable.id = :id", { id: timetable.id })
-        .execute();
-    },
-  );
-
+  await persistTimetableSectionDelta(timetable, {
+    removed: courseSections,
+    writeExamTimes: true,
+  });
   return res.json({
     message: "course removed",
     sectionIds: courseSections.map((section) => section.id),

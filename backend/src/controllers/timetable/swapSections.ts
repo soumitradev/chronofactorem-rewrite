@@ -1,23 +1,15 @@
 import type { Request, Response } from "express";
 import { namedUUIDType, timetableIDType } from "lib";
 import { z } from "zod";
-import { type Section, Timetable } from "../../entity/entities.js";
 import { validate } from "../../middleware/zodValidateRequest.js";
-import {
-  courseRepository,
-  sectionRepository,
-  timetableRepository,
-} from "../../repositories/index.js";
-import {
-  addExamTimings,
-  checkForClassHoursClash,
-  checkForExamHoursClash,
-  formatSectionTimings,
-  removeCourseExamTimes,
-  removeSectionFromTimetable,
-  updateSectionWarnings,
-} from "../../utils/timetableDomain.js";
+import { sectionRepository } from "../../repositories/index.js";
 import { getCourseSectionTypes, loadTimetableContext } from "./helpers.js";
+import {
+  applyAddSection,
+  applyRemoveSection,
+  loadSectionWithCourse,
+  persistTimetableSectionDelta,
+} from "./sectionChanges.js";
 
 const dataSchema = z.object({
   body: z.object({
@@ -32,10 +24,6 @@ const dataSchema = z.object({
 export const swapSectionsValidator = validate(dataSchema);
 
 export const swapSections = async (req: Request, res: Response) => {
-  const logger = req.log;
-  const sectionId = req.body.sectionId;
-  const newSectionId = req.body.newSectionId;
-
   const context = await loadTimetableContext(req, res, {
     withSections: true,
     draftOnly: true,
@@ -43,49 +31,33 @@ export const swapSections = async (req: Request, res: Response) => {
   if (!context) {
     return;
   }
-  const { author, timetable } = context;
+  const { timetable } = context;
 
-  // Checks that removeSection makes
-
-  const section = await sectionRepository.findOneBy({ id: sectionId });
-
-  if (section === null) {
-    return res.status(404).json({ message: "Section not found" });
+  const section = await loadSectionWithCourse(
+    res,
+    req.body.sectionId,
+    "Section not found",
+  );
+  if (!section) {
+    return;
   }
-
-  let timetableHasSection = false;
-
-  for (const timetableSection of timetable.sections) {
-    if (timetableSection.id === section.id) {
-      timetableHasSection = true;
-      break;
-    }
-  }
-
-  if (!timetableHasSection) {
+  if (!timetable.sections.some(({ id }) => id === section.id)) {
     return res.status(404).json({
       message: "Section not part of given timetable",
     });
   }
 
-  // Checks that addSection makes
-
-  const newSection = await sectionRepository.findOneBy({ id: newSectionId });
-
-  if (newSection === null) {
-    return res.status(404).json({ message: "New section not found" });
+  const newSection = await loadSectionWithCourse(
+    res,
+    req.body.newSectionId,
+    "New section not found",
+  );
+  if (!newSection) {
+    return;
   }
 
-  const course = await courseRepository.findOneBy({ id: section.courseId });
-
-  const newCourse = await courseRepository.findOneBy({
-    id: newSection.courseId,
-  });
-
-  if (!course || !newCourse) {
-    return res.status(404).json({ message: "course not found" });
-  }
-
+  const course = section.course;
+  const newCourse = newSection.course;
   if (course.archived || newCourse.archived) {
     return res.status(418).json({ message: "course is archived" });
   }
@@ -94,131 +66,31 @@ export const swapSections = async (req: Request, res: Response) => {
     sectionRepository.manager,
     course.id,
   );
-
   const newSectionTypes = await getCourseSectionTypes(
     sectionRepository.manager,
     newCourse.id,
   );
 
-  // Here we update the state of the timetable in-memory and see if it violates any of our clash rules
-
-  const sameCourseSections: Section[] = timetable.sections.filter(
-    (currentSection) => {
-      return currentSection.courseId === section?.courseId;
-    },
-  );
-
-  // remove course's exam timings if no other sections of this course in TT
-  if (sameCourseSections.length === 1) {
-    timetable.examTimes = removeCourseExamTimes(
-      timetable.examTimes,
-      course.code,
-    );
+  // apply the swap in memory first so the clash checks see the timetable
+  // without the old section
+  if (
+    !applyRemoveSection(req, res, context, { course, section, sectionTypes })
+  ) {
+    return;
+  }
+  const added = applyAddSection(res, timetable, {
+    course: newCourse,
+    section: newSection,
+    sectionTypes: newSectionTypes,
+  });
+  if (!added) {
+    return;
   }
 
-  removeSectionFromTimetable(timetable, section);
-
-  try {
-    timetable.warnings = updateSectionWarnings(
-      course.code,
-      section,
-      sectionTypes,
-      false,
-      timetable.warnings,
-    );
-  } catch (_err: any) {
-    logger.error(
-      `user with id ${author.id} tried to remove section ${section.type}${section.number} of course ${course.code} but it isn't part of their timetable according to warnings`,
-    );
-
-    return res.status(500).json({
-      message:
-        "Timetable and warnings state inconsistent, please contact us if you see this",
-    });
-  }
-
-  const classHourClashes = checkForClassHoursClash(timetable, newSection);
-  if (classHourClashes.clash) {
-    return res.status(400).json({
-      message: `section clashes with ${classHourClashes.course}`,
-    });
-  }
-
-  const examHourClashes = checkForExamHoursClash(timetable, newCourse);
-  if (examHourClashes.clash && !examHourClashes.sameCourse) {
-    return res.status(400).json({
-      message: `course's exam clashes with ${examHourClashes.course}'s ${examHourClashes.exam}`,
-    });
-  }
-
-  const sameNewCourseTypeSectionsCount = timetable.sections.filter(
-    (currentSection) => {
-      return (
-        currentSection.courseId === newSection?.courseId &&
-        currentSection.type === newSection?.type
-      );
-    },
-  ).length;
-
-  if (sameNewCourseTypeSectionsCount > 0) {
-    return res.status(400).json({
-      message: `can't have multiple sections of type ${newSection.type}`,
-    });
-  }
-
-  timetable.warnings = updateSectionWarnings(
-    newCourse.code,
-    newSection,
-    newSectionTypes,
-    true,
-    timetable.warnings,
-  );
-
-  const newTimes = formatSectionTimings(newCourse.code, newSection);
-
-  const newExamTimes = timetable.examTimes;
-  addExamTimings(newExamTimes, newCourse);
-
-  // Finally once we have decided that the swap is valid we write to db in a safe transaction
-  await timetableRepository.manager.transaction(
-    async (transactionalEntityManager) => {
-      if (!timetable) {
-        return res.status(404).json({ message: "timetable not found" });
-      }
-
-      await transactionalEntityManager
-        .createQueryBuilder()
-        .relation(Timetable, "sections")
-        .of(timetable)
-        .remove(section);
-
-      await transactionalEntityManager
-        .createQueryBuilder()
-        .relation(Timetable, "sections")
-        .of(timetable)
-        .add(newSection);
-
-      await transactionalEntityManager
-        .createQueryBuilder()
-        .update(Timetable)
-        .set({
-          timings: [...timetable.timings, ...newTimes],
-          warnings: timetable.warnings,
-        })
-        .where("timetable.id = :id", { id: timetable.id })
-        .execute();
-
-      if (!examHourClashes.sameCourse) {
-        await transactionalEntityManager
-          .createQueryBuilder()
-          .update(Timetable)
-          .set({
-            examTimes: newExamTimes,
-          })
-          .where("timetable.id = :id", { id: timetable.id })
-          .execute();
-      }
-    },
-  );
+  await persistTimetableSectionDelta(timetable, {
+    removed: [section],
+    added: [newSection],
+    writeExamTimes: added.writeExamTimes,
+  });
   return res.json({ message: "section swapped" });
 };

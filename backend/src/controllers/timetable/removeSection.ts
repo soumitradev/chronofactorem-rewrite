@@ -1,19 +1,14 @@
 import type { Request, Response } from "express";
 import { namedUUIDType, timetableIDType } from "lib";
 import { z } from "zod";
-import type { Section } from "../../entity/entities.js";
 import { validate } from "../../middleware/zodValidateRequest.js";
-import {
-  courseRepository,
-  sectionRepository,
-  timetableRepository,
-} from "../../repositories/index.js";
-import {
-  removeCourseExamTimes,
-  removeSectionFromTimetable,
-  updateSectionWarnings,
-} from "../../utils/timetableDomain.js";
+import { sectionRepository } from "../../repositories/index.js";
 import { getCourseSectionTypes, loadTimetableContext } from "./helpers.js";
+import {
+  applyRemoveSection,
+  loadSectionWithCourse,
+  persistTimetableSectionDelta,
+} from "./sectionChanges.js";
 
 const dataSchema = z.object({
   body: z.object({
@@ -27,9 +22,6 @@ const dataSchema = z.object({
 export const removeSectionValidator = validate(dataSchema);
 
 export const removeSection = async (req: Request, res: Response) => {
-  const logger = req.log;
-  const sectionId = req.body.sectionId;
-
   const context = await loadTimetableContext(req, res, {
     withSections: true,
     draftOnly: true,
@@ -37,82 +29,39 @@ export const removeSection = async (req: Request, res: Response) => {
   if (!context) {
     return;
   }
-  const { author, timetable } = context;
+  const { timetable } = context;
 
-  const section = await sectionRepository.findOneBy({ id: sectionId });
-
-  if (section === null) {
-    return res.status(404).json({ message: "Section not found" });
+  const section = await loadSectionWithCourse(
+    res,
+    req.body.sectionId,
+    "Section not found",
+  );
+  if (!section) {
+    return;
   }
-
-  let timetableHasSection = false;
-
-  for (const timetableSection of timetable.sections) {
-    if (timetableSection.id === section.id) {
-      timetableHasSection = true;
-      break;
-    }
-  }
-
-  if (!timetableHasSection) {
+  if (!timetable.sections.some(({ id }) => id === section.id)) {
     return res.status(404).json({
       message: "Section not part of given timetable",
     });
   }
-
-  const courseId = section.courseId;
-
-  const course = await courseRepository.findOneBy({ id: courseId });
-
-  if (!course) {
-    return res.status(404).json({ message: "course not found" });
-  }
-
+  const course = section.course;
   if (course.archived) {
     return res.status(418).json({ message: "course is archived" });
   }
 
-  const sameCourseSections: Section[] = timetable.sections.filter(
-    (currentSection) => {
-      return currentSection.courseId === section?.courseId;
-    },
-  );
-
-  // remove course's exam timings if no other sections of this course in TT
-  if (sameCourseSections.length === 1) {
-    timetable.examTimes = removeCourseExamTimes(
-      timetable.examTimes,
-      course.code,
-    );
-  }
-
   const sectionTypes = await getCourseSectionTypes(
     sectionRepository.manager,
-    courseId,
+    course.id,
   );
-
-  removeSectionFromTimetable(timetable, section);
-
-  try {
-    timetable.warnings = updateSectionWarnings(
-      course.code,
-      section,
-      sectionTypes,
-      false,
-      timetable.warnings,
-    );
-  } catch (_err: any) {
-    logger.error(
-      `user with id ${author.id} tried to remove section ${section.type}${section.number} of course ${course.code} but it isn't part of their timetable according to warnings`,
-    );
-
-    return res.status(500).json({
-      message:
-        "Timetable and warnings state inconsistent, please contact us if you see this",
-    });
+  if (
+    !applyRemoveSection(req, res, context, { course, section, sectionTypes })
+  ) {
+    return;
   }
 
-  await timetableRepository.save(timetable);
-
+  await persistTimetableSectionDelta(timetable, {
+    removed: [section],
+    writeExamTimes: true,
+  });
   return res.json({ message: "section removed" });
 };
