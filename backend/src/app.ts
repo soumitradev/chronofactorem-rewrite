@@ -23,16 +23,13 @@ app.use(logger);
 
 // to parse cookies
 app.use(cookieParser());
-const frontendIsHTTPS = env.FRONTEND_URL.includes("https://");
+const frontendUrl = new URL(env.FRONTEND_URL);
 app.use(
   cors({
     credentials: true,
     origin: [
       env.FRONTEND_URL,
-      env.FRONTEND_URL.replace(
-        frontendIsHTTPS ? "https://" : "http://",
-        frontendIsHTTPS ? "https://www." : "http://www.",
-      ),
+      `${frontendUrl.protocol}//www.${frontendUrl.host}`,
     ],
   }),
 );
