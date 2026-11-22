@@ -6,6 +6,7 @@ import {
   timetableRepository,
   userRepository,
 } from "../../repositories/index.js";
+import timetableJSON from "../../timetable.json" with { type: "json" };
 import sqids, { validSqid } from "../../utils/sqids.js";
 
 export const fetchAuthorOrError = async (
@@ -88,6 +89,28 @@ export const loadTimetableContext = async (
     }
   }
   return { author, timetable };
+};
+
+export const newTimetableValues = (author: User, source?: Timetable) => {
+  const { acadYear, semester } = timetableJSON.metadata;
+  return {
+    authorId: author.id,
+    name: "Untitled Timetable",
+    degrees: author.degrees,
+    private: true,
+    draft: true,
+    archived: false,
+    acadYear,
+    semester,
+    // batch 0 means the author's email gave no batch; year 0 is a sentinel so
+    // the frontend skips year-based labels and defaults for this timetable
+    year: author.batch === 0 ? 0 : acadYear - author.batch + 1,
+    timings: source?.timings ?? [],
+    examTimes: source?.examTimes ?? [],
+    warnings: source?.warnings ?? [],
+    createdAt: new Date(),
+    lastUpdated: new Date(),
+  };
 };
 
 export const getCourseSectionTypes = async (
