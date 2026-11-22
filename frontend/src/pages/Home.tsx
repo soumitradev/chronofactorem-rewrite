@@ -29,7 +29,6 @@ import {
 } from "@/lib/sharedTransition";
 import { useSkeletonCrossfade } from "@/lib/skeletonFade";
 import { cn, widePageClass } from "@/lib/utils";
-import { prefersReducedMotion } from "@/lib/viewTransitions";
 import TimetableCard from "../components/TimetableCard";
 import { Button } from "../components/ui/button";
 import { router } from "../router";
@@ -67,20 +66,11 @@ function focusAfterDelete(id: string): () => void {
   };
 }
 
-function useCollapsingCards(timetables: Timetable[] | undefined) {
+function useCollapsingCards() {
   const [leaving, setLeaving] = useState<Leaving>(() => new Map());
-  // deleted ids stay hidden until the ["user"] refetch drops them, so a slow
-  // refetch can't bring a collapsed card back
+  // deleted ids stay hidden, so a slow ["user"] refetch can't bring a
+  // collapsed card back
   const [deleted, setDeleted] = useState<ReadonlySet<string>>(() => new Set());
-  useEffect(() => {
-    setDeleted((prev) => {
-      if (prev.size === 0) return prev;
-      const next = new Set(
-        [...prev].filter((id) => timetables?.some((t) => t.id === id)),
-      );
-      return next.size === prev.size ? prev : next;
-    });
-  }, [timetables]);
   const collapse = useCallback(
     (timetable: Timetable, section: SectionName, index: number) => {
       // the delete dialog has closed by now, so move focus on from it or the
@@ -123,16 +113,6 @@ const CollapsingCard = ({
   done: (id: string) => void;
   children: React.ReactNode;
 }) => {
-  useEffect(() => {
-    if (!leaving) return;
-    if (prefersReducedMotion()) {
-      done(id);
-      return;
-    }
-    const timer = setTimeout(() => done(id), 260);
-    return () => clearTimeout(timer);
-  }, [leaving, id, done]);
-
   return (
     <div
       className={cn(
@@ -141,6 +121,7 @@ const CollapsingCard = ({
       )}
       inert={leaving}
       aria-hidden={leaving || undefined}
+      // still fires under reduced motion, whose transitions last 0.01ms
       onTransitionEnd={(e) => {
         if (
           leaving &&
@@ -243,7 +224,7 @@ function Home() {
     getSharedTimetable,
   );
   const timetables = user?.timetables;
-  const { leaving, deleted, collapse, done } = useCollapsingCards(timetables);
+  const { leaving, deleted, collapse, done } = useCollapsingCards();
   const stagger = useRef(!staggered).current;
   const hasData = user !== undefined;
   useEffect(() => {

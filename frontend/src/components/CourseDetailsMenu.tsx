@@ -11,6 +11,7 @@ import {
 } from "@/data-access/timetables";
 import { formatExam } from "@/lib/formatTime";
 import { HapticTap, haptic } from "@/lib/haptics";
+import { useSectionPreview } from "@/lib/sectionPreview";
 import { useSkeletonFadeIn } from "@/lib/skeletonFade";
 import { titleCase } from "@/lib/titleCase";
 import { useTypeSlide } from "@/lib/typeSlide";
@@ -83,7 +84,7 @@ const CourseDetailsMenu = ({
   onSectionHover,
 }: {
   showHeader?: boolean;
-  onSectionHover?: (sectionId: string | null) => void;
+  onSectionHover: (sectionId: string | null) => void;
 }) => {
   const {
     state: {
@@ -183,19 +184,8 @@ const CourseDetailsMenu = ({
   for (const id of seen.current.ids)
     if (!selectedIds.has(id)) seen.current.ids.delete(id);
 
-  const hovered = useRef(false);
-  const hoverRef = useRef(onSectionHover);
-  hoverRef.current = onSectionHover;
-  useEffect(
-    () => () => {
-      if (hovered.current) hoverRef.current?.(null);
-    },
-    [],
-  );
-  const hover = (id: string | null) => {
-    hovered.current = id !== null;
-    onSectionHover?.(id);
-  };
+  const { setPreview } = useSectionPreview();
+  useEffect(() => () => setPreview(null), [setPreview]);
 
   // same course: slide to the type, don't push the panel
   const pickClash = (item: { courseId: string; type: SectionKind }) => {
@@ -355,7 +345,7 @@ const CourseDetailsMenu = ({
                       busy={busy}
                       className={cn(sectionGroup, fadeIn.className)}
                       onPick={handleSectionClick}
-                      onHover={hover}
+                      onHover={onSectionHover}
                       onClashPick={pickClash}
                       onPulsed={() => setPulsedNonce(landed)}
                     />

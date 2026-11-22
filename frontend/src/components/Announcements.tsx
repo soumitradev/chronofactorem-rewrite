@@ -16,7 +16,6 @@ import { useSkeletonFadeIn } from "@/lib/skeletonFade";
 import { useAnnouncementsSheet } from "@/lib/useAnnouncementsSheet";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import { cn } from "@/lib/utils";
-import { prefersReducedMotion } from "@/lib/viewTransitions";
 import ReportIssue from "./ReportIssue";
 import { Button } from "./ui/button";
 import { Collapse } from "./ui/collapse";
@@ -104,7 +103,6 @@ function Announcements() {
   // items read this session fade into Read instead of just appearing
   const [leaving, setLeaving] = useState<Set<string>>(() => new Set());
   const [justRead, setJustRead] = useState<Set<string>>(() => new Set());
-  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
   useEffect(() => {
     localStorage.setItem(
@@ -113,33 +111,21 @@ function Announcements() {
     );
   }, [readAnnouncements]);
 
-  useEffect(() => {
-    const pending = timers.current;
-    return () => {
-      for (const t of pending.values()) clearTimeout(t);
-    };
-  }, []);
-
-  const markAsRead = (id: string) => {
-    setReadAnnouncements((prev) => (prev.includes(id) ? prev : [...prev, id]));
+  const markAsRead = (ids: readonly string[]) => {
+    setReadAnnouncements((prev) => {
+      const fresh = ids.filter((id) => !prev.includes(id));
+      return fresh.length === 0 ? prev : [...prev, ...fresh];
+    });
   };
 
   const markAllAsRead = () => {
-    setReadAnnouncements((prev) => [
-      ...prev,
-      ...(announcements ?? [])
-        .map((announcement) => announcement.id)
-        .filter((id) => !prev.includes(id)),
-    ]);
+    markAsRead((announcements ?? []).map((announcement) => announcement.id));
   };
 
   const finishLeaving = (id: string) => {
-    const timer = timers.current.get(id);
-    if (timer === undefined) return;
-    clearTimeout(timer);
-    timers.current.delete(id);
-    markAsRead(id);
+    markAsRead([id]);
     setLeaving((prev) => {
+      if (!prev.has(id)) return prev;
       const next = new Set(prev);
       next.delete(id);
       return next;
@@ -148,17 +134,15 @@ function Announcements() {
 
   const startMarkAsRead = (id: string) => {
     setJustRead((prev) => new Set(prev).add(id));
-    if (prefersReducedMotion()) {
-      markAsRead(id);
-      return;
-    }
-    if (timers.current.has(id)) return;
-    timers.current.set(
-      id,
-      setTimeout(() => finishLeaving(id), 240),
-    );
     setLeaving((prev) => new Set(prev).add(id));
   };
+
+  // closing the sheet (back button included) can unmount items mid-fade,
+  // before their transitionend
+  if (!open && leaving.size > 0) {
+    markAsRead([...leaving]);
+    setLeaving(new Set());
+  }
 
   const notifiedAnnouncements = useRef(new Set<string>());
   const dismissToast = useRef<(() => void) | undefined>(undefined);
