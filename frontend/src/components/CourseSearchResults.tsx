@@ -4,8 +4,10 @@ import type z from "zod";
 import { useTimetableState } from "@/context";
 import { formatExam } from "@/lib/formatTime";
 import { useTimetableNav } from "@/lib/useTimetableNav";
+import { cn } from "@/lib/utils";
 import { CourseRow } from "./CourseRow";
 import { EmptyBird } from "./EmptyBird";
+import { group } from "./listStyles";
 
 type Course = z.infer<typeof courseType>;
 
@@ -51,7 +53,10 @@ export const CourseSearchResults = ({ query }: { query: string }) => {
       {results.length > 0 ? (
         <div
           key={query}
-          className="mx-4 mt-2 mb-6 animate-[fade-in_var(--d-2)_var(--e-out)] rounded-xl border border-line bg-surface lg:mx-0 [&>*+*]:border-t [&>*+*]:border-line [&>:first-child]:rounded-t-[calc(var(--radius-xl)-1px)] [&>:last-child]:rounded-b-[calc(var(--radius-xl)-1px)]"
+          className={cn(
+            group,
+            "mb-6 animate-[fade-in_var(--d-2)_var(--e-out)]",
+          )}
         >
           {results.map(({ course, clashing }) => (
             <CourseRow

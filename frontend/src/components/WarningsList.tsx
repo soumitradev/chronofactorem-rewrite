@@ -5,11 +5,9 @@ import { useTimetableNav } from "@/lib/useTimetableNav";
 import { useWarningsSummary } from "@/lib/useWarningsSummary";
 import { cn } from "@/lib/utils";
 import { cdcIssueUrl } from "@/utils/timetable";
+import { group, overline } from "./listStyles";
 import { Button } from "./ui/button";
 
-const overline = "px-4 lg:px-0 pt-3 text-[13px] font-medium text-ink-muted";
-const group =
-  "mx-4 mt-2 lg:mx-0 rounded-xl border border-line bg-surface [&>*+*]:border-t [&>*+*]:border-line";
 const row = "flex min-h-[60px] items-center gap-2.5 px-3.5 py-3";
 
 function Open({ label, onClick }: { label: string; onClick: () => void }) {
@@ -86,7 +84,7 @@ export function WarningsList({
       )}
       {showCdcs && (
         <>
-          <div className={overline}>CDCs missing:</div>
+          <div className={cn(overline, "pt-3")}>CDCs missing:</div>
           <div className={group}>
             {missingCdcs.map((e) => (
               <div key={e.courseId ?? e.code} className={row}>
