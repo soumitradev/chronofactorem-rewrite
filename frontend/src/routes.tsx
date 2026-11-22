@@ -19,8 +19,7 @@ import { authStatusQueryOptions } from "@/data-access/hooks/useAuthStatus";
 import { courseQueryOptions } from "@/data-access/hooks/useCourses";
 import { timetableQueryOptions } from "@/data-access/hooks/useTimetable";
 import { userQueryOptions } from "@/data-access/hooks/useUser";
-import { rootSearchSchema } from "@/lib/rootSearch";
-import { timetableSearchSchema } from "@/lib/timetableSearch";
+import { rootSearchSchema, timetableSearchSchema } from "@/lib/timetableSearch";
 import RootComponent from "./RootComponent";
 
 export const rootRoute = rootRouteWithContext<{

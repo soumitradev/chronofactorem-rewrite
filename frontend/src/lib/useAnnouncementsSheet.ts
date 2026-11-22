@@ -1,6 +1,6 @@
 import { useNavigate, useRouter, useSearch } from "@tanstack/react-router";
 import { useCallback, useMemo } from "react";
-import type { RootSearch } from "./rootSearch";
+import type { RootSearch } from "./timetableSearch";
 
 type RootSheetState = { chronoNav?: boolean; rootSheet?: string };
 
