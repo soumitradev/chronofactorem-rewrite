@@ -4,7 +4,7 @@ import { ButtonLabel } from "@/components/ButtonLabel";
 import { CruxMark } from "@/components/CruxMark";
 import DegreeDropDown from "@/components/DegreeDropDown";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import { useCreateUser } from "@/data-access/user";
 import { router } from "../router";
 
@@ -12,7 +12,6 @@ function GetDegrees() {
   const { year } = Route.useSearch();
   const [firstDegree, setFirstDegree] = useState<string | null>(null);
   const [secondDegree, setSecondDegree] = useState<string | null>(null);
-  const { toast } = useToast();
   const { mutate: createUser, isPending } = useCreateUser();
   // isPending lags a render behind a fast double tap, so guard synchronously.
   const submitting = useRef(false);

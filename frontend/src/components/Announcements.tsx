@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import { useAnnouncements } from "@/data-access/user";
 import { useSkeletonFadeIn } from "@/lib/skeletonFade";
 import { useAnnouncementsSheet } from "@/lib/useAnnouncementsSheet";
@@ -88,7 +88,6 @@ function AnnouncementGroup({
 }
 
 function Announcements() {
-  const { toast, dismiss } = useToast();
   const { data: announcements, isLoading, isError, error } = useAnnouncements();
   const { open, show, hide } = useAnnouncementsSheet();
   const isDesktop = useIsDesktop();
@@ -172,17 +171,15 @@ function Announcements() {
   };
 
   const notifiedAnnouncements = useRef(new Set<string>());
-  const toastId = useRef<string | undefined>(undefined);
+  const dismissToast = useRef<(() => void) | undefined>(undefined);
 
-  // The open sheet already shows everything; don't leave a toast over it.
-  // Dismiss once: `dismiss` is a new function every render, and dispatching
-  // again would re-render this component and loop.
+  // the open sheet already shows everything, so don't leave a toast over it
   useEffect(() => {
-    if (open && toastId.current) {
-      dismiss(toastId.current);
-      toastId.current = undefined;
+    if (open) {
+      dismissToast.current?.();
+      dismissToast.current = undefined;
     }
-  }, [open, dismiss]);
+  }, [open]);
 
   useEffect(() => {
     const unreadAnnouncements =
@@ -198,7 +195,7 @@ function Announcements() {
         notifiedAnnouncements.current.add(announcement.id);
       }
       if (open) return;
-      toastId.current = toast({
+      dismissToast.current = toast({
         title: "New Announcements",
         description: `You have ${
           unreadAnnouncements.length
@@ -211,9 +208,9 @@ function Announcements() {
             Mark all as read
           </ToastAction>
         ),
-      }).id;
+      }).dismiss;
     }
-  }, [announcements, readAnnouncements, toast, open]);
+  }, [announcements, readAnnouncements, open]);
 
   const sorted = [...(announcements ?? [])].sort((a, b) => time(b) - time(a));
   const unread = sorted.filter((a) => !readAnnouncements.includes(a.id));

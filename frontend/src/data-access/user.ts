@@ -1,9 +1,4 @@
-import {
-  queryOptions,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import type {
   announcementWithIDType,
@@ -11,9 +6,7 @@ import type {
   userWithTimetablesType,
 } from "lib";
 import type z from "zod";
-import { useToast } from "@/components/ui/use-toast";
-import chronoAPI from "./axios";
-import { toastHandler } from "./errors";
+import chronoAPI, { useApiMutation } from "./axios";
 
 type userAuthStatusType = {
   message: string;
@@ -84,9 +77,8 @@ export const userQueryOptions = queryOptions({
 export const useUser = () => useQuery(userQueryOptions);
 
 export const useCreateUser = () => {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
-  return useMutation({
+  return useApiMutation({
     mutationFn: (body: { degrees: (string | null)[] }) => {
       return chronoAPI.post("/api/auth/submit", body);
     },
@@ -95,14 +87,12 @@ export const useCreateUser = () => {
         queryKey: ["user"],
       });
     },
-    onError: (error) => toastHandler(error, toast),
   });
 };
 
 export const useEditUser = () => {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
-  return useMutation({
+  return useApiMutation({
     mutationFn: (body: { degrees: (string | null)[] }) => {
       return chronoAPI.post("/api/user/edit", body);
     },
@@ -111,7 +101,6 @@ export const useEditUser = () => {
         queryKey: ["user"],
       });
     },
-    onError: (error) => toastHandler(error, toast),
   });
 };
 
