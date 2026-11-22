@@ -9,8 +9,6 @@ export const namedUUIDType = (name?: string) =>
     message: addNameToString("id must be a non-empty string", name),
   });
 
-export const uuidType = namedUUIDType();
-
 export const namedEmailType = (name?: string) =>
   z
     .email({
@@ -42,8 +40,6 @@ export const namedNonEmptyStringType = (name?: string) =>
     })
     .min(1, { message: addNameToString("must be a non-empty string", name) });
 
-export const nonEmptyStringType = namedNonEmptyStringType();
-
 export const namedBooleanType = (name?: string) =>
   z.boolean({
     error: (issue) =>
@@ -51,25 +47,19 @@ export const namedBooleanType = (name?: string) =>
         ? addNameToString("is required", name)
         : addNameToString("not a boolean", name),
   });
-export const booleanType = namedBooleanType();
 
 export const namedIntegerType = (name?: string) =>
   z.int({
     message: addNameToString("is an invalid integer", name),
   });
-export const integerType = namedIntegerType();
 
 export const namedYearType = (name?: string) =>
   z
     .int({
       message: addNameToString("year is an invalid year", name),
     })
-    .positive({
-      message: addNameToString("year is an invalid year", name),
-    })
     .lte(3000)
     .gte(1900);
-export const yearType = namedYearType();
 
 // batch is a year, or 0 as a sentinel for users whose email gives no batch,
 // like hd or other non-f addresses on the hyderabad domain
@@ -84,14 +74,10 @@ export const namedBatchType = (name?: string) =>
     .lte(3000, {
       message: addNameToString("batch is an invalid year", name),
     });
-export const batchType = namedBatchType();
 
 export const namedCollegeYearType = (name?: string) =>
   z
     .int({
-      message: addNameToString("college year is an invalid year", name),
-    })
-    .positive({
       message: addNameToString("college year is an invalid year", name),
     })
     .lte(6, {
@@ -115,7 +101,6 @@ export const namedCollegeYearOrSentinelType = (name?: string) =>
     .lte(6, {
       message: addNameToString("college year is an invalid year", name),
     });
-export const collegeYearOrSentinelType = namedCollegeYearOrSentinelType();
 
 export const namedSemesterType = (name?: string) =>
   z
@@ -134,7 +119,6 @@ export const namedSemesterType = (name?: string) =>
         name,
       ),
     });
-export const semesterType = namedSemesterType();
 
 export const namedISOTimestampType = (name?: string) =>
   z.iso
@@ -144,17 +128,3 @@ export const namedISOTimestampType = (name?: string) =>
     .min(1, {
       message: addNameToString("time must be a non-empty string", name),
     });
-export const isoTimestampType = namedISOTimestampType();
-
-export const namedShortBITSIDType = (name?: string) =>
-  z
-    .string({
-      error: (issue) =>
-        issue.input === undefined
-          ? addNameToString("BITS ID is required", name)
-          : addNameToString("BITS ID is not a string", name),
-    })
-    .regex(new RegExp(/^f20[0-9]{6}$/), {
-      message: addNameToString("BITS ID is invalid", name),
-    });
-export const shortBITSIDType = namedShortBITSIDType();
