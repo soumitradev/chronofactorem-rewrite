@@ -16,6 +16,7 @@ import { useSkeletonFadeIn } from "@/lib/skeletonFade";
 import { useAnnouncementsSheet } from "@/lib/useAnnouncementsSheet";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import { cn } from "@/lib/utils";
+import { prefersReducedMotion } from "@/lib/viewTransitions";
 import ReportIssue from "./ReportIssue";
 import { Button } from "./ui/button";
 import { Collapse } from "./ui/collapse";
@@ -31,9 +32,6 @@ const dateFormat = new Intl.DateTimeFormat("en-US", {
 
 const time = (a: Announcement) =>
   a.createdAt ? new Date(a.createdAt).getTime() : 0;
-
-const reducedMotion = () =>
-  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 function AnnouncementGroup({
   label,
@@ -152,7 +150,7 @@ function Announcements() {
 
   const startMarkAsRead = (id: string) => {
     setJustRead((prev) => new Set(prev).add(id));
-    if (reducedMotion()) {
+    if (prefersReducedMotion()) {
       markAsRead(id);
       return;
     }

@@ -17,7 +17,7 @@ import { useTypeSlide } from "@/lib/typeSlide";
 import { useSwipe } from "@/lib/useSwipe";
 import { useTimetableNav } from "@/lib/useTimetableNav";
 import { cn } from "@/lib/utils";
-import { PANEL_VT_CLASS } from "@/lib/viewTransitions";
+import { PANEL_VT_CLASS, prefersReducedMotion } from "@/lib/viewTransitions";
 import {
   ClashingWith,
   ClashPill,
@@ -45,9 +45,6 @@ const sectionGroup = cn(group, "mt-2.5 mb-6");
 const rowGrid = "grid grid-cols-[40px_1fr_auto] gap-x-2.5 px-3.5 py-[13px]";
 
 const ADVANCE_DELAY = 350;
-
-const reducedMotion = () =>
-  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const examHelp = {
   midsem:
@@ -185,7 +182,8 @@ const CourseDetailsMenu = ({
 
   const landed = useClashLanding(course?.id ?? null, currentSectionType);
   const [pulsedNonce, setPulsedNonce] = useState<number | null>(null);
-  const pulse = landed !== null && pulsedNonce !== landed && !reducedMotion();
+  const pulse =
+    landed !== null && pulsedNonce !== landed && !prefersReducedMotion();
 
   const slide = useTypeSlide(
     currentCourseID,

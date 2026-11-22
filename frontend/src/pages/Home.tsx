@@ -29,6 +29,7 @@ import {
 } from "@/lib/sharedTransition";
 import { useSkeletonCrossfade } from "@/lib/skeletonFade";
 import { cn, widePageClass } from "@/lib/utils";
+import { prefersReducedMotion } from "@/lib/viewTransitions";
 import TimetableCard from "../components/TimetableCard";
 import { Button } from "../components/ui/button";
 import { router } from "../router";
@@ -111,9 +112,6 @@ function useCollapsingCards(timetables: Timetable[] | undefined) {
   );
   return { leaving, deleted, collapse, done };
 }
-
-const prefersReducedMotion = () =>
-  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const CollapsingCard = ({
   id,
