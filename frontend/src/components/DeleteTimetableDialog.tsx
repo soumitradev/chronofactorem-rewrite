@@ -20,10 +20,8 @@ import { useIsDesktop } from "@/lib/useIsDesktop";
 const description =
   "All your progress on this timetable will be lost, and unrecoverable.";
 
-/**
- * Delete confirmation: a bottom sheet on phones, a centred dialog on desktop.
- * Controlled only; every way of closing it reports `onOpenChange(false)`.
- */
+// Delete confirmation: a bottom sheet on phones, a centred dialog on desktop.
+// Controlled only; every way of closing it reports `onOpenChange(false)`
 export const DeleteTimetableDialog = ({
   timetableId,
   onDeleted,

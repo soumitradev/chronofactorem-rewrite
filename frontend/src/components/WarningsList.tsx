@@ -25,16 +25,14 @@ function Open({ label, onClick }: { label: string; onClick: () => void }) {
   );
 }
 
-/**
- * Warning rows for the desktop warnings popover and the phone warnings sheet.
- * `onNavigate` lets the container close itself when a row opens a course.
- */
+// Warning rows for the desktop warnings popover and the phone warnings sheet.
+// `onNavigate` lets the container close itself when a row opens a course
 export function WarningsList({
   onNavigate,
   className,
 }: {
   onNavigate?: () => void;
-  /** On the root, e.g. `[&_*]:lg:mx-0` to drop the row inset in a popover. */
+  // On the root, e.g. `[&_*]:lg:mx-0` to drop the row inset in a popover
   className?: string;
 }) {
   const { missingSections, missingCdcs, notFound } = useWarningsSummary();

@@ -74,7 +74,7 @@ function DisabledTooltip({
   );
 }
 
-/** Phone: the ⚠ count beside the meta line. Opens the warnings sheet. */
+// Phone: the ⚠ count beside the meta line. Opens the warnings sheet
 export function WarningsChip() {
   const { count } = useWarningsSummary();
   const { openSheet } = useTimetableNav();
@@ -99,7 +99,7 @@ export function WarningsChip() {
   );
 }
 
-/** Desktop: the ⚠ count in the toolbar, listing the warnings in a popover. */
+// Desktop: the ⚠ count in the toolbar, listing the warnings in a popover
 export function WarningsButton() {
   const summary = useWarningsSummary();
   const [open, setOpen] = useState(false);
@@ -133,7 +133,7 @@ export function WarningsButton() {
   );
 }
 
-/** Desktop: rows (horizontal) or columns (vertical) grid. */
+// Desktop: rows (horizontal) or columns (vertical) grid
 export function OrientationToggle() {
   const { orientation, toggle } = useOrientation();
   return (
@@ -217,7 +217,7 @@ export function PublishButton({ layout }: { layout: Layout }) {
         if (!blocked) publish();
         // Blocked with no courses: the fix is adding one, even when CDCs are
         // missing too. Otherwise missing sections block it, and Warnings lists
-        // them.
+        // them
         else
           openSheet(coursesInTimetable.length === 0 ? "courses" : "warnings");
       }}
@@ -274,7 +274,7 @@ export function ExportButton({
   );
 }
 
-/** ⋯: Copy (phone), Edit (view page) and Delete, as the viewer may. */
+// ⋯: Copy (phone), Edit (view page) and Delete, as the viewer may
 export function MoreMenu({
   page,
   layout,
@@ -364,7 +364,7 @@ export function MoreMenu({
   );
 }
 
-/** Desktop: Copy Timetable, disabled with master's reason when archived. */
+// Desktop: Copy Timetable, disabled with master's reason when archived
 export function CopyButton() {
   const {
     state: { user, timetable },

@@ -60,7 +60,7 @@ type EditTimetableParams = {
   };
 };
 
-// Shared so every caller sees one edit in flight, wherever it was started.
+// Shared so every caller sees one edit in flight, wherever it was started
 export const editTimetableKey = ["editTimetable"];
 
 export const useEditTimetable = ({ unlockOnSuccess = true } = {}) => {

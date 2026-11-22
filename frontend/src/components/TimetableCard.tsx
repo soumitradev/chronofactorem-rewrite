@@ -187,7 +187,7 @@ function TimetableCard({
                     });
                   })
                   .catch(() => {
-                    // useEditTimetable already toasts the error.
+                    // useEditTimetable already toasts the error
                   });
               }}
             >

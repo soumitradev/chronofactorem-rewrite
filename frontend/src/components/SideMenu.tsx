@@ -16,7 +16,7 @@ export function SideMenu({ isOnEditPage }: { isOnEditPage: boolean }) {
   } = useTimetableState();
   const { setTab, setQuery } = useTimetableNav();
   // The input is edited locally; the URL (replace) follows after a short
-  // delay so async router updates never fight the caret or IME.
+  // delay so async router updates never fight the caret or IME
   const [draftTerm, setDraftTerm] = useState(searchTerm);
   const lastSent = useRef(searchTerm);
   useEffect(() => {
@@ -34,7 +34,7 @@ export function SideMenu({ isOnEditPage }: { isOnEditPage: boolean }) {
     return () => clearTimeout(id);
   }, [draftTerm, setQuery]);
   const inputRef = useRef<HTMLInputElement>(null);
-  // Clearing skips the debounce so the normal list comes straight back.
+  // Clearing skips the debounce so the normal list comes straight back
   const clearSearch = () => {
     lastSent.current = "";
     setDraftTerm("");
@@ -44,7 +44,7 @@ export function SideMenu({ isOnEditPage }: { isOnEditPage: boolean }) {
 
   if (timetable === undefined) return;
 
-  // The view page has no search, so a stray ?q= is ignored there.
+  // The view page has no search, so a stray ?q= is ignored there
   const searching = isOnEditPage && searchTerm.trim() !== "";
 
   return (

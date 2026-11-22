@@ -46,11 +46,11 @@ type Leaving = Map<
   { timetable: Timetable; section: SectionName; index: number }
 >;
 
-// First-load stagger plays once per page load, not on back navigation.
+// First-load stagger plays once per page load, not on back navigation
 let staggered = false;
 
 // Where keyboard focus goes once a card is deleted: the next card, else the
-// previous one, else the page heading. The order is read before the collapse.
+// previous one, else the page heading. The order is read before the collapse
 function focusAfterDelete(id: string): () => void {
   const ids = [...document.querySelectorAll<HTMLElement>("[data-card-id]")].map(
     (el) => el.dataset.cardId ?? "",
@@ -72,7 +72,7 @@ function focusAfterDelete(id: string): () => void {
 function useCollapsingCards(timetables: Timetable[] | undefined) {
   const [leaving, setLeaving] = useState<Leaving>(() => new Map());
   // Deleted ids stay out of the live lists until the ["user"] refetch drops
-  // them, so a slow refetch can't bring a collapsed card back.
+  // them, so a slow refetch can't bring a collapsed card back
   const [deleted, setDeleted] = useState<ReadonlySet<string>>(() => new Set());
   useEffect(() => {
     setDeleted((prev) => {

@@ -103,7 +103,7 @@ function Announcements() {
     }
   });
   // Items sliding out of Unread, and items read this session (their Read rows
-  // fade in rather than appearing).
+  // fade in rather than appearing)
   const [leaving, setLeaving] = useState<Set<string>>(() => new Set());
   const [justRead, setJustRead] = useState<Set<string>>(() => new Set());
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());

@@ -42,7 +42,7 @@ export const router = new Router({
   defaultNotFoundComponent: NotFound,
   // Timetable pages key scroll by path, so search-param-only history moves
   // (sheet, course, day/week) keep the page where it is. Every other page keys
-  // by history entry, so following a link still starts at the top.
+  // by history entry, so following a link still starts at the top
   scrollRestoration: true,
   getScrollRestorationKey: (location) =>
     /^\/(edit|view)\//.test(location.pathname)

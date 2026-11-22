@@ -174,7 +174,7 @@ const CourseDetailsMenu = ({
   );
 
   // Rows already selected when a course opens don't play the tick; rows
-  // selected (or reselected) while it is open do.
+  // selected (or reselected) while it is open do
   const selectedIds = new Set(timetable?.sections.map((s) => s.id));
   const seen = useRef<{ course: string | null; ids: Set<string> }>({
     course: null,
@@ -185,7 +185,7 @@ const CourseDetailsMenu = ({
   for (const id of seen.current.ids)
     if (!selectedIds.has(id)) seen.current.ids.delete(id);
 
-  // Clear a hover preview if the picker goes away under the pointer.
+  // Clear a hover preview if the picker goes away under the pointer
   const hovered = useRef(false);
   const hoverRef = useRef(onSectionHover);
   hoverRef.current = onSectionHover;

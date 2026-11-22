@@ -22,7 +22,7 @@ type ListMemory = {
 };
 
 // What each timetable's list looked like when it was last on screen, so a
-// course added from the picker can move from Remaining into Added on return.
+// course added from the picker can move from Remaining into Added on return
 const listMemory = new Map<string, ListMemory>();
 
 const topIn = (el: Element, list: Element) =>
@@ -53,14 +53,14 @@ export function CoursesTab({ editable }: { editable: boolean }) {
     [editable, cdcs, coursesInTimetable],
   );
   // Every remaining entry as if nothing were added, to keep CDC order for
-  // sets that are collapsing away.
+  // sets that are collapsing away
   const allEntries = useMemo(
     () => (editable ? getRemainingCdcs(cdcs, []) : []),
     [editable, cdcs],
   );
 
   const [prev] = useState(() => listMemory.get(timetableId));
-  // Sets satisfied while the list was away play their collapse once.
+  // Sets satisfied while the list was away play their collapse once
   const [exiting, setExiting] = useState<Set<string>>(() => {
     if (!prev || prefersReducedMotion()) return new Set();
     const now = new Set(
@@ -74,7 +74,7 @@ export function CoursesTab({ editable }: { editable: boolean }) {
   const remainingRef = useRef<HTMLDivElement>(null);
 
   // Courses that moved from Remaining into Added since last time slide up.
-  // Runs on mount only: it compares against the list as it was last shown.
+  // Runs on mount only: it compares against the list as it was last shown
   useLayoutEffect(() => {
     const list = listRef.current;
     const addedGroup = addedRef.current;
@@ -88,7 +88,7 @@ export function CoursesTab({ editable }: { editable: boolean }) {
       if (!row) continue;
       const dy = from - topIn(row, list);
       if (dy === 0) continue;
-      // Opaque and on top while it slides over the rows in between.
+      // Opaque and on top while it slides over the rows in between
       row.style.position = "relative";
       row.style.zIndex = "1";
       row.style.transition = "none";
@@ -155,7 +155,7 @@ export function CoursesTab({ editable }: { editable: boolean }) {
       : live.has(e.course.id),
   );
 
-  // Nothing to look up without a known degree and year.
+  // Nothing to look up without a known degree and year
   const noCdcList =
     timetable.year !== 0 &&
     !timetable.degrees.includes(unknownDegree) &&
