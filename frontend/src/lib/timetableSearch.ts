@@ -4,6 +4,14 @@ import * as z from "zod/mini";
 const loose = <T extends z.ZodMiniType>(schema: T) =>
   z.catch(z.optional(schema), undefined);
 
+// a loose string: the root's output feeds every child route, so an enum here
+// would erase `sheet=courses` before the timetable routes saw it
+export const rootSearchSchema = z.object({
+  sheet: loose(z.string()),
+});
+
+export type RootSearch = z.infer<typeof rootSearchSchema>;
+
 export const timetableSearchSchema = z.object({
   sheet: loose(z.enum(["courses", "warnings", "announcements"])),
   tab: loose(z.enum(["courses", "exams"])),
