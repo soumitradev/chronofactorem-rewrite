@@ -1,5 +1,5 @@
 import { useIsMutating } from "@tanstack/react-query";
-import { TimetableActionType, useTimetableState } from "@/context";
+import { useTimetableState } from "@/context";
 import {
   editTimetableKey,
   useCopyTimetable,
@@ -21,7 +21,7 @@ export function useTimetableActions(): {
 } {
   const {
     state: { timetable },
-    dispatch,
+    setIsCopyingTimetable,
   } = useTimetableState();
   const { mutateAsync: editTimetable } = useEditTimetable();
   const isEditing = useIsMutating({ mutationKey: editTimetableKey }) > 0;
@@ -50,10 +50,7 @@ export function useTimetableActions(): {
 
   const copy = () => {
     if (timetable === undefined) return;
-    dispatch({
-      type: TimetableActionType.SetIsCopyingTimetable,
-      isCopyingTimetable: true,
-    });
+    setIsCopyingTimetable(true);
     setTimeout(() => {
       // react query drops per-call mutate callbacks once their
       // component unmounts (the caller may be a menu that closes),
@@ -69,10 +66,7 @@ export function useTimetableActions(): {
           // useCopyTimetable already toasts the error
         });
       setTimeout(() => {
-        dispatch({
-          type: TimetableActionType.SetIsCopyingTimetable,
-          isCopyingTimetable: false,
-        });
+        setIsCopyingTimetable(false);
       }, 1000);
     }, 1000);
   };

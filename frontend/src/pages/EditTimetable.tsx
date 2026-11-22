@@ -10,7 +10,6 @@ import { TimetableDock } from "@/components/timetable/TimetableDock";
 import { TimetablePageSkeleton } from "@/components/timetable/TimetablePageSkeleton";
 import { TimetableSurface } from "@/components/timetable/TimetableSurface";
 import { TimetableProvider, useTimetableState } from "@/context";
-import { useCourse } from "@/data-access/courses";
 import { useAddRemoveTimetableSection } from "@/data-access/timetables";
 import {
   SectionPreviewProvider,
@@ -34,6 +33,7 @@ function EditTimetable() {
       screenIsLarge,
       timetableDetailsSections,
       course,
+      isCourseLoading,
     },
   } = useTimetableState();
   const { openCourse } = useTimetableNav();
@@ -45,9 +45,6 @@ function EditTimetable() {
   const { view, day, showDay } = useSurfaceNav(dayCount);
   const pending =
     useIsMutating({ mutationKey: ["sections", timetable?.id] }) > 0;
-  // an unknown course id (stale or hand-edited URL) shows the list instead
-  const { isLoading: isCourseLoading, data: courseData } =
-    useCourse(currentCourseID);
 
   useEffect(() => {
     if (!timetable) return;
@@ -123,7 +120,8 @@ function EditTimetable() {
       null);
 
   const SideBar =
-    currentCourseID !== null && (isCourseLoading || courseData) ? (
+    // an unknown course id (stale or hand-edited URL) shows the list instead
+    currentCourseID !== null && (isCourseLoading || course) ? (
       <CourseDetailsMenu
         showHeader={screenIsLarge}
         onSectionHover={handleSectionHover}
