@@ -160,10 +160,9 @@ const waitForBackend = async (backend: ChildProcess) => {
 const QUIET_MS = 100;
 const trackRequests = async (page: Page) => {
   await page.addInitScript(() => {
-    const w = window as unknown as { lastMutation: number };
-    w.lastMutation = performance.now();
+    window.lastMutation = performance.now();
     new MutationObserver(() => {
-      w.lastMutation = performance.now();
+      window.lastMutation = performance.now();
     }).observe(document, {
       subtree: true,
       childList: true,
@@ -194,8 +193,7 @@ const trackRequests = async (page: Page) => {
         const domQuiet = await page.evaluate(() =>
           document.querySelector("[data-skeleton]")
             ? 0
-            : performance.now() -
-              (window as unknown as { lastMutation: number }).lastMutation,
+            : performance.now() - window.lastMutation,
         );
         if (domQuiet >= QUIET_MS && inflight === 0) return;
       }
@@ -257,11 +255,19 @@ type Pinned = {
   snap: string;
   children: { child: HTMLElement; translate: string; transition: string }[];
 };
+
+declare global {
+  interface Window {
+    lastMutation: number;
+    pinned?: Pinned[];
+    shooting?: boolean;
+  }
+}
+
 const pinScroll = (page: Page) =>
   page.evaluate(() => {
-    const w = window as unknown as { pinned?: Pinned[]; shooting?: boolean };
-    w.shooting = true;
-    w.pinned = [];
+    window.shooting = true;
+    window.pinned = [];
     for (const el of document.querySelectorAll<HTMLElement>("*")) {
       const left = el.scrollLeft;
       if (left === 0) continue;
@@ -276,7 +282,7 @@ const pinScroll = (page: Page) =>
             ]
           : [],
       );
-      w.pinned.push({ el, left, snap: el.style.scrollSnapType, children });
+      window.pinned.push({ el, left, snap: el.style.scrollSnapType, children });
       el.style.scrollSnapType = "none";
       el.scrollLeft = 0;
       // the reduced-motion styles give everything a tiny transition, and a
@@ -289,8 +295,7 @@ const pinScroll = (page: Page) =>
   });
 const unpinScroll = (page: Page) =>
   page.evaluate(() => {
-    const w = window as unknown as { pinned?: Pinned[]; shooting?: boolean };
-    for (const { el, left, snap, children } of w.pinned ?? []) {
+    for (const { el, left, snap, children } of window.pinned ?? []) {
       for (const { child, translate } of children) {
         child.style.translate = translate;
         getComputedStyle(child).translate;
@@ -301,8 +306,8 @@ const unpinScroll = (page: Page) =>
       el.style.scrollSnapType = snap;
       el.scrollLeft = left;
     }
-    w.pinned = [];
-    w.shooting = false;
+    window.pinned = [];
+    window.shooting = false;
   });
 
 // a full-page shot resizes the viewport for the shot, and pinScroll scrolls,
@@ -311,9 +316,8 @@ const unpinScroll = (page: Page) =>
 // for a keyboard when its search box has focus, and the tabs move their
 // underline to the pinned offset
 const holdDuringShots = () => {
-  const w = window as unknown as { shooting?: boolean };
   const hold = (e: Event) => {
-    if (w.shooting) e.stopImmediatePropagation();
+    if (window.shooting) e.stopImmediatePropagation();
   };
   for (const type of ["scroll", "scrollend", "resize"]) {
     window.addEventListener(type, hold, { capture: true });
@@ -327,7 +331,7 @@ const holdDuringShots = () => {
   window.ResizeObserver = class extends Native {
     constructor(callback: ResizeObserverCallback) {
       super((entries, observer) => {
-        if (!w.shooting) callback(entries, observer);
+        if (!window.shooting) callback(entries, observer);
       });
     }
   };
