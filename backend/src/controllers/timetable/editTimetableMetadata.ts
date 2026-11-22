@@ -1,26 +1,20 @@
 import type { Request, Response } from "express";
-import {
-  namedBooleanType,
-  namedNonEmptyStringType,
-  timetableIDType,
-} from "lib";
+import { namedBooleanType, namedNonEmptyStringType } from "lib";
 import { z } from "zod";
 import { validate } from "../../middleware/zodValidateRequest.js";
 import { timetableRepository } from "../../repositories/index.js";
-import { loadTimetableContext } from "./helpers.js";
+import { loadTimetableContext, timetableIdParamsValidator } from "./helpers.js";
 
-const dataSchema = z.object({
-  body: z.object({
-    name: namedNonEmptyStringType("timetable name"),
-    isPrivate: namedBooleanType("timetable isPrivate"),
-    isDraft: namedBooleanType("timetable isDraft"),
+export const editTimetableMetadataValidator = validate(
+  z.object({
+    body: z.object({
+      name: namedNonEmptyStringType("timetable name"),
+      isPrivate: namedBooleanType("timetable isPrivate"),
+      isDraft: namedBooleanType("timetable isDraft"),
+    }),
+    params: timetableIdParamsValidator,
   }),
-  params: z.object({
-    id: timetableIDType,
-  }),
-});
-
-export const editTimetableMetadataValidator = validate(dataSchema);
+);
 
 export const editTimetableMetadata = async (req: Request, res: Response) => {
   const name: string = req.body.name;

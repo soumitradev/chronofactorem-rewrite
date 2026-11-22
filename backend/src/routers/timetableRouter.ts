@@ -9,8 +9,8 @@ import {
 } from "../controllers/timetable/copyTimetable.js";
 import { createTimetable } from "../controllers/timetable/createTimetable.js";
 import {
-  deleteTimeTableValidator,
   deleteTimetable,
+  deleteTimetableValidator,
 } from "../controllers/timetable/deleteTimetable.js";
 import {
   editTimetableMetadata,
@@ -46,7 +46,7 @@ timetableRouter.get(
 timetableRouter.post(
   "/:id/delete",
   authenticate,
-  deleteTimeTableValidator,
+  deleteTimetableValidator,
   deleteTimetable,
 );
 timetableRouter.post("/:id/add", authenticate, addSectionValidator, addSection);
