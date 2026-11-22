@@ -1,16 +1,17 @@
 import type { Request, Response } from "express";
-import { timetableIDType } from "lib";
 import { z } from "zod";
 import { validate } from "../../middleware/zodValidateRequest.js";
-import { decodeTimetableSqidOr404, findTimetableById } from "./helpers.js";
+import {
+  decodeTimetableSqidOr404,
+  findTimetableById,
+  timetableIdParamsValidator,
+} from "./helpers.js";
 
-const dataSchema = z.object({
-  params: z.object({
-    id: timetableIDType,
+export const getTimetableByIdValidator = validate(
+  z.object({
+    params: timetableIdParamsValidator,
   }),
-});
-
-export const getTimetableByIdValidator = validate(dataSchema);
+);
 
 export const getTimetableById = async (req: Request, res: Response) => {
   const id = req.params.id as string;

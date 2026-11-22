@@ -1,27 +1,29 @@
 import type { Request, Response } from "express";
-import { namedUUIDType, timetableIDType } from "lib";
+import { namedUUIDType } from "lib";
 import { z } from "zod";
 import { validate } from "../../middleware/zodValidateRequest.js";
 import {
   courseRepository,
   sectionRepository,
 } from "../../repositories/index.js";
-import { getCourseSectionTypes, loadTimetableContext } from "./helpers.js";
+import {
+  getCourseSectionTypes,
+  loadTimetableContext,
+  timetableIdParamsValidator,
+} from "./helpers.js";
 import {
   applyRemoveSection,
   persistTimetableSectionDelta,
 } from "./sectionChanges.js";
 
-const dataSchema = z.object({
-  body: z.object({
-    courseId: namedUUIDType("course"),
+export const removeCourseValidator = validate(
+  z.object({
+    body: z.object({
+      courseId: namedUUIDType("course"),
+    }),
+    params: timetableIdParamsValidator,
   }),
-  params: z.object({
-    id: timetableIDType,
-  }),
-});
-
-export const removeCourseValidator = validate(dataSchema);
+);
 
 export const removeCourse = async (req: Request, res: Response) => {
   const courseId = req.body.courseId;

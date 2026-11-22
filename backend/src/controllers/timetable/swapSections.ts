@@ -1,9 +1,14 @@
 import type { Request, Response } from "express";
-import { namedUUIDType, timetableIDType } from "lib";
+import { namedUUIDType } from "lib";
 import { z } from "zod";
 import { validate } from "../../middleware/zodValidateRequest.js";
 import { sectionRepository } from "../../repositories/index.js";
-import { getCourseSectionTypes, loadTimetableContext } from "./helpers.js";
+import {
+  getCourseSectionTypes,
+  loadTimetableContext,
+  sectionIdValidator,
+  timetableIdParamsValidator,
+} from "./helpers.js";
 import {
   applyAddSection,
   applyRemoveSection,
@@ -11,17 +16,15 @@ import {
   persistTimetableSectionDelta,
 } from "./sectionChanges.js";
 
-const dataSchema = z.object({
-  body: z.object({
-    sectionId: namedUUIDType("section"),
-    newSectionId: namedUUIDType("new section"),
+export const swapSectionsValidator = validate(
+  z.object({
+    body: z.object({
+      sectionId: sectionIdValidator,
+      newSectionId: namedUUIDType("new section"),
+    }),
+    params: timetableIdParamsValidator,
   }),
-  params: z.object({
-    id: timetableIDType,
-  }),
-});
-
-export const swapSectionsValidator = validate(dataSchema);
+);
 
 export const swapSections = async (req: Request, res: Response) => {
   const context = await loadTimetableContext(req, res, {

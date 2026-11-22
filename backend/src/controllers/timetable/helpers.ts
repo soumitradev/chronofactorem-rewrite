@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
-import type { sectionTypeList } from "lib";
+import { namedUUIDType, type sectionTypeList, timetableIDType } from "lib";
 import type { EntityManager } from "typeorm";
+import { z } from "zod";
 import { Section, type Timetable, type User } from "../../entity/entities.js";
 import {
   timetableRepository,
@@ -8,6 +9,10 @@ import {
 } from "../../repositories/index.js";
 import timetableJSON from "../../timetable.json" with { type: "json" };
 import sqids, { validSqid } from "../../utils/sqids.js";
+
+export const timetableIdParamsValidator = z.object({ id: timetableIDType });
+
+export const sectionIdValidator = namedUUIDType("section");
 
 export const fetchAuthorOrError = async (
   req: Request,

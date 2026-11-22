@@ -1,19 +1,20 @@
 import type { Request, Response } from "express";
-import { timetableIDType } from "lib";
 import { z } from "zod";
 import { Timetable } from "../../entity/entities.js";
 import { validate } from "../../middleware/zodValidateRequest.js";
 import { timetableRepository } from "../../repositories/index.js";
 import sqids from "../../utils/sqids.js";
-import { loadTimetableContext, newTimetableValues } from "./helpers.js";
+import {
+  loadTimetableContext,
+  newTimetableValues,
+  timetableIdParamsValidator,
+} from "./helpers.js";
 
-const dataSchema = z.object({
-  params: z.object({
-    id: timetableIDType,
+export const copyTimetableValidator = validate(
+  z.object({
+    params: timetableIdParamsValidator,
   }),
-});
-
-export const copyTimetableValidator = validate(dataSchema);
+);
 
 export const copyTimetable = async (req: Request, res: Response) => {
   const context = await loadTimetableContext(req, res, {
