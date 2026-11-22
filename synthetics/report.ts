@@ -14,17 +14,6 @@ import sharp from "sharp";
 import { type Change, changesBetween, groupRepeats } from "./changes.ts";
 import { synthetics } from "./synthetics.ts";
 
-// compares a run's screenshots with the baseline (master's screenshots where
-// a pull request branched off, or master's latest on master), and reports
-// what changed in the step summary and, on a pull request, in one comment
-// that's edited on every run.
-//
-// the images live in this repo under a ref that isn't a branch, so clones
-// never download them, and get there with plain git rather than the api.
-// that ref only ever moves forward, every image is named after its hash and
-// every link pins a commit, so a report keeps showing exactly what it showed
-// for as long as the repo exists
-
 const {
   GITHUB_REPOSITORY,
   GITHUB_STEP_SUMMARY,
@@ -41,6 +30,8 @@ const gh = (args: string[], input?: string) =>
 const stderrOf = (error: unknown) =>
   error instanceof Error && "stderr" in error ? String(error.stderr) : "";
 
+// non-branch ref so clones never fetch images; append-only with hash names
+// and pinned commit URLs so old reports keep resolving
 const REF = `refs/${IMAGES_REF}`;
 const git = (
   args: string[],
@@ -53,8 +44,7 @@ const git = (
     stdio: "pipe",
   });
 
-// a file's bytes as of a commit. the store is fetched without file contents,
-// so this downloads just the one file
+// store is blobless, so cat-file fetches only this blob
 const read = (commit: string, path: string) =>
   git(["ls-tree", "--full-tree", commit, "--", path]).length
     ? git(["cat-file", "blob", `${commit}:${path}`])
@@ -88,14 +78,6 @@ const chunk = (type: string, data: Buffer) => {
   return Buffer.concat([head, data, crc]);
 };
 
-// before and after as the two frames of an animated png that switches
-// between them, so a change shows up as flicker. apng rather than webp or gif
-// because raw.githubusercontent.com only serves .png as an image, and
-// github's image proxy drops anything else. sharp can't write apng, so it
-// encodes each frame and their image data is put into one file here. the
-// smaller screenshot is padded with white to the larger. each frame gets a
-// strip on top saying which one it is, above the screenshot rather than over
-// it so it hides nothing
 const BLINK_MS = 800;
 const LABEL_HEIGHT = 32;
 const LABELS = [
@@ -109,6 +91,8 @@ const label = (width: number, { text, background }: (typeof LABELS)[number]) =>
       `<text x="12" y="21" fill="#ffffff" font-family="sans-serif" font-size="15" font-weight="bold">${text}</text>` +
       "</svg>",
   );
+// apng because raw.githubusercontent.com only serves .png as an image and
+// github's proxy drops webp/gif; sharp can't write apng so we mux its frames
 const blinkImage = async (before: Buffer, after: Buffer) => {
   const sizes = await Promise.all(
     [before, after].map((png) => sharp(png).metadata()),
@@ -145,13 +129,12 @@ const blinkImage = async (before: Buffer, after: Buffer) => {
     data.writeUInt32BE(sequence++);
     data.writeUInt32BE(width, 4);
     data.writeUInt32BE(height, 8);
-    // offset 0,0, then the delay as a fraction of a second, then no disposal
-    // and the frame replacing the last rather than drawn over it
+    // delay fraction in ms; zeroed bytes leave 0,0 offset and replace-frame blend
     data.writeUInt16BE(BLINK_MS, 20);
     data.writeUInt16BE(1000, 22);
     return chunk("fcTL", data);
   };
-  // frames, and 0 plays so it loops forever
+  // num_plays left 0 to loop forever
   const animation = Buffer.alloc(8);
   animation.writeUInt32BE(frames.length);
   return Buffer.concat([
@@ -163,7 +146,7 @@ const blinkImage = async (before: Buffer, after: Buffer) => {
       ...frame
         .filter(({ type }) => type === "IDAT")
         .map(({ data }) => {
-          // the first frame is the png's own image, later ones are fdAT
+          // frame 0 is standard IDAT, later frames are sequenced fdAT
           if (!i) return chunk("IDAT", data);
           const number = Buffer.alloc(4);
           number.writeUInt32BE(sequence++);
@@ -193,24 +176,20 @@ const fetchStore = (...extraArgs: string[]) => {
   }
 };
 
-// the store's latest commit, fetched with its file list but no contents
 const tip = () =>
   fetchStore("--depth=1")
     ? { commit: git(["rev-parse", REF]).toString().trim() }
     : undefined;
 
-// the baseline as of the commit a pull request branched off master, so what
-// master merged since isn't put on the pull request. master only makes a
-// baseline when its screenshots change, so the newest one made from that
-// commit or before it is exactly what master looked like there. this fetches
-// the store's whole history, still without contents
+// walk the blobless store history for the newest baseline at or before the
+// PR's branch point so later master merges aren't blamed on the PR
 const mergeBase = (head: string) => {
   if (!fetchStore()) return undefined;
   const base = git(["merge-base", head, "origin/master"]).toString().trim();
   for (const line of git(["log", "--format=%H %s", REF])
     .toString()
     .split("\n")) {
-    // the pull requests' own screenshots are stored in between
+    // skip PR screenshot commits interleaved on the same ref
     const [, commit, source] = line.match(/^(\w+) baseline from (\w+)$/) ?? [];
     if (!source) continue;
     if (
@@ -229,15 +208,11 @@ const readManifest = (commit: string | undefined): Manifest => {
   return file ? JSON.parse(file.toString()) : {};
 };
 
-// adds files on top of the store's tip in one push, retrying if another run
-// moved it first. one push instead of an api call per image, which ran into
-// github's limits on creating content. images are named after their hash, so
-// any already stored are skipped. nothing is ever removed, so older links
-// keep resolving
 const BOT = {
   name: "github-actions[bot]",
   email: "41898282+github-actions[bot]@users.noreply.github.com",
 };
+// batch into one git push with retry (per-image API calls hit github rate limits)
 const store = (files: Map<string, Buffer>, message: string) => {
   const blobs = [...files].map(([path, data]) => ({
     path,
@@ -331,8 +306,7 @@ for (const [, { data, hash }] of noBaseline ? [] : [...changed, ...added]) {
 }
 const blinks = new Map<string, string>();
 const changes = new Map<string, Change[]>();
-// master's report only goes to its step summary, the pull request already
-// showed these changes, so it skips the slow part
+// skip slow blink/diff work on master since the PR already showed these changes
 const details = !isBaseline;
 await Promise.all(
   (details ? changed : []).map(async ([path, { data, hash }]) => {
@@ -368,7 +342,6 @@ const commit = files.size
 
 const url = (path: string) =>
   `https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${commit}/${path}`;
-// at its own size, or the comment's width if that's narrower
 const image = (path: string) =>
   `<a href="${url(path)}"><img src="${url(path)}"></a>`;
 const name = (path: string) => {
@@ -376,9 +349,6 @@ const name = (path: string) => {
   return `\`${synthetic}\` · ${device}`;
 };
 
-// screenshots grouped by the route their synthetic visits, with ids made
-// generic so every timetable's edit page lands together. groups and rows keep
-// the order of synthetics.ts
 const routes = new Map(
   synthetics.map((synthetic, order) => [
     synthetic.name,
@@ -397,14 +367,12 @@ const byRoute = <T>(items: T[], pathOf: (item: T) => string) => {
   );
   const groups = new Map<string, T[]>();
   for (const item of sorted) {
-    // a removed synthetic isn't in synthetics.ts anymore
     const route = of(item)?.route ?? "removed synthetics";
     groups.set(route, [...(groups.get(route) ?? []), item]);
   }
   return groups;
 };
-// each screenshot under its own heading rather than in a table, which
-// shrinks them to thumbnails
+// headings instead of a markdown table, which shrinks images to thumbnails
 const section = <T>(
   items: T[],
   pathOf: (item: T) => string,
@@ -523,8 +491,6 @@ const report = lines.join("\n");
 if (GITHUB_STEP_SUMMARY) appendFileSync(GITHUB_STEP_SUMMARY, `${report}\n`);
 console.log(report);
 
-// one comment per pull request, edited in place. a pr that never changed a
-// screenshot doesn't get one
 if (PR_NUMBER) {
   const existing = gh([
     "api",

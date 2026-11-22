@@ -1,18 +1,14 @@
 import sharp from "sharp";
 
-// one change in a screenshot: the box around a patch of changed pixels, with
-// what was in that box before and after
 export type Change = {
   width: number;
   height: number;
-  // how many of its pixels changed
   pixels: number;
   before: Int32Array;
   after: Int32Array;
 };
 
-// a change with fewer changed pixels than this, like a few antialiased
-// pixels, may well be noise
+// patches smaller than this (e.g. antialiased edges) are treated as noise
 export const TINY = 10;
 
 const pixelsOf = async (png: Buffer) => {
@@ -41,7 +37,6 @@ export const changesBetween = async (
   );
   const width = Math.max(before.width, after.width);
   const height = Math.max(before.height, after.height);
-  // outside the smaller screenshot counts as changed
   const pixelAt = (image: typeof before, x: number, y: number) =>
     x < image.width && y < image.height ? image.px[y * image.width + x] : -1;
 
@@ -124,9 +119,6 @@ export const changesBetween = async (
   });
 };
 
-// two changes are the same if their boxes are within a couple of pixels in
-// size and most of their pixels match, lined up at either the left or the
-// right edge, since text next to a changed part can push it along
 const SIZE_SLACK = 2;
 const ALIKE = 0.9;
 const alike = (first: Change, second: Change) => {
@@ -138,6 +130,7 @@ const alike = (first: Change, second: Change) => {
   }
   const width = Math.min(first.width, second.width);
   const height = Math.min(first.height, second.height);
+  // align at either edge since adjacent text changes can shift a patch
   for (const [firstX, secondX] of [
     [0, 0],
     [first.width - width, second.width - width],
@@ -156,9 +149,6 @@ const alike = (first: Change, second: Change) => {
   return false;
 };
 
-// the fewest screenshots that between them show every change that isn't
-// tiny, picked greedily, earlier screenshots first on a tie. every other
-// screenshot repeats changes already shown, or only has tiny ones
 export const groupRepeats = <T>(
   screenshots: { item: T; changes: Change[] }[],
 ) => {
@@ -174,6 +164,7 @@ export const groupRepeats = <T>(
   const shown: { item: T; changes: Change[] }[] = [];
   const unseen = (change: Change) =>
     !shown.some(({ changes }) => changes.some((seen) => alike(change, seen)));
+  // greedy set cover over non-tiny changes; earlier shots win ties
   for (;;) {
     const counts = left.map(({ changes }) => changes.filter(unseen).length);
     const most = Math.max(0, ...counts);

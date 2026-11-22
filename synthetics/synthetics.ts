@@ -12,14 +12,6 @@ export const setTheme = async (page: Page, theme: Theme) => {
   );
 };
 
-// one synthetic = one screen worth looking at. Currently written for the starter-pack
-// seed scenario. `as` is a user key from that scenario, or the email of someone
-// who hasn't signed up yet (omit it to stay logged out), and `{key}` in the
-// url becomes the id of that seeded timetable. `act` runs after the page
-// settles, for screens that need interactions to reach. announcements default
-// to read so their toast doesn't cover every screen, unless
-// `unreadAnnouncements` is set. `hide` covers parts that are on screen but not
-// what the synthetic is about, see `Part`
 export type Synthetic = {
   name: string;
   as?: string;
@@ -29,15 +21,10 @@ export type Synthetic = {
   hide?: Part[];
 };
 
-// parts that show up on most screens, marked with data-shot in the frontend
-// ("grid" covers the phone day and week controls too).
-// each is left visible on a few synthetics that are about it and hidden
-// behind a hatch everywhere else, so a change to one only touches its own
-// synthetics' screenshots instead of most of them. a new synthetic that hides
-// nothing is always safe, it just shows more
+// data-shot regions hatched out on unrelated screens so changes to shared
+// chrome don't dirty every screenshot ("grid" includes phone day/week controls)
 export type Part = "navbar" | "timetable-header" | "grid" | "side-menu";
 
-// on phones the side menu lives behind a button
 const openMenu = async (page: Page) => {
   const menu = page.getByRole("button", { name: "Courses and exams" });
   const tabs = page.getByRole("tablist", { name: "Timetable details" });
@@ -50,11 +37,10 @@ const openTab = (name: string) => async (page: Page) => {
   await page.getByRole("tab", { name }).click();
 };
 
-// the search box is debounced into ?q=, and the results only filter once
-// that lands
 const search = async (page: Page, term: string) => {
   await openMenu(page);
   await page.getByRole("searchbox", { name: "Search Courses" }).fill(term);
+  // wait for debounced search query to reach ?q= before results filter
   await page.waitForURL((url) => url.searchParams.get("q") === term);
 };
 
@@ -75,7 +61,6 @@ const openAddedCourse = async (page: Page, name: RegExp, code: string) => {
   return removeButton;
 };
 
-// the desktop grid with days across; phones and tablets have no toggle
 const vertical = async (page: Page) => {
   const toggle = page.getByLabel("Make timetable vertical");
   if (await toggle.isVisible()) await toggle.click();
@@ -96,8 +81,7 @@ export const synthetics: Synthetic[] = [
     as: "alice",
     url: "/",
     unreadAnnouncements: true,
-    // the toast closes itself after a few seconds, hovering keeps it open
-    // for each theme's shot
+    // hover keeps the auto-dismissing toast open across both theme shots
     act: (page) => page.getByText("New Announcements", { exact: true }).hover(),
   },
   { name: "home-empty", as: "esha", url: "/", hide: ["navbar"] },
@@ -169,8 +153,7 @@ export const synthetics: Synthetic[] = [
       await page.getByRole("button", { name: "Back" }).hover();
     },
   },
-  // MEL G643 has the longest course name in the scenario, and no practical
-  // yet so it shows up in the warnings too
+  // MEL G643 has the longest name in the scenario and triggers a missing-P warning
   { name: "edit-long-course-name", as: "hd", url: "/edit/{hd-draft}" },
   {
     name: "edit-long-course-name-vertical",
@@ -267,7 +250,6 @@ export const synthetics: Synthetic[] = [
       );
       await removeButton.click();
       await page.getByText("Added · 8", { exact: true }).waitFor();
-      // hovering keeps the toast open for each theme's shot
       await page.getByText("Removed CS F213", { exact: true }).hover();
     },
   },
@@ -292,12 +274,11 @@ export const synthetics: Synthetic[] = [
     hide: ["navbar"],
   },
   {
-    // the downloaded png in each theme, shown in place of the page. vertical,
-    // where the blocks have room for course names
     name: "view-export",
     as: "alice",
     url: "/view/{alice-public}",
     act: async (page) => {
+      // vertical gives exported timetable blocks room for course names
       await vertical(page);
       const images: string[] = [];
       for (const theme of THEMES) {
@@ -310,7 +291,7 @@ export const synthetics: Synthetic[] = [
       await page.emulateMedia({ colorScheme: THEMES[0] });
       const img = (png: string) =>
         `<img style="display:block;width:100%" src="data:image/png;base64,${png}">`;
-      // both theme classes, so the runner's wait for each theme passes
+      // both theme classes so the runner's theme wait passes
       await page.setContent(
         `<html class="light dark"><body style="margin:0">${images.map(img).join("")}</body></html>`,
       );

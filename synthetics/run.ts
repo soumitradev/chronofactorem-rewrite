@@ -18,28 +18,24 @@ const backendDir = resolve(root, "backend");
 const frontendDir = resolve(root, "frontend");
 const outDir = resolve(import.meta.dirname, "screenshots");
 
-// overridable so several runs can share a machine, each with its own ports
-// and database
+// overridable so parallel runs on one machine don't collide
 const BACKEND_PORT = Number(process.env.SYNTHETICS_BACKEND_PORT ?? 3999);
 const FRONTEND_PORT = Number(process.env.SYNTHETICS_FRONTEND_PORT ?? 4999);
 const FRONTEND_URL = `http://localhost:${FRONTEND_PORT}`;
 const API = `http://localhost:${BACKEND_PORT}`;
 
-// the browser clock; the scenario pins every timestamp in the database
+// fixed browser clock matching timestamps pinned in starter-pack.json
 const NOW = new Date("2026-10-14T10:30:00+05:30");
 
-// one device per form factor, each where the tailwind layout is tightest: the
-// narrowest phone below sm, a tablet right on md and still on the phone nav
-// below lg, and the smallest common laptop, above xl but below 2xl.
-// everything renders at 1x to keep pngs small
+// tightest tailwind breakpoints per form factor (<sm, md/<lg, xl/<2xl)
+// rendered at 1x deviceScaleFactor below to keep pngs small
 const DEVICES = {
   "iphone-15": devices["iPhone 15"],
   "ipad-mini": devices["iPad Mini"],
   "laptop-1366": { viewport: { width: 1366, height: 768 } },
 };
 
-// dropped and recreated on every run, so it has to look like a synthetics
-// database, never a real one
+// guard against dropping a real db since each run drops and recreates this
 const DB_NAME = process.env.SYNTHETICS_DB ?? "chrono_synthetics";
 if (!/^[a-z0-9_]*synthetics[a-z0-9_]*$/.test(DB_NAME)) {
   console.error(
@@ -47,8 +43,6 @@ if (!/^[a-z0-9_]*synthetics[a-z0-9_]*$/.test(DB_NAME)) {
   );
   process.exit(1);
 }
-// SHARD=i/n shoots every nth screenshot starting at the ith, so ci can split
-// the run across machines
 const rawShard = process.env.SHARD ?? "1/1";
 const shardMatch = /^([1-9]\d*)\/([1-9]\d*)$/.exec(rawShard);
 const shard = Number(shardMatch?.[1]);
@@ -69,8 +63,7 @@ const admin = {
   password: process.env.POSTGRES_PASSWORD ?? "chrono",
   database: "postgres",
 };
-// the backend ignores POSTGRES_DB and always lands in the database named
-// after its user, so the run gets a user of its own
+// backend ignores POSTGRES_DB and connects to the db named after POSTGRES_USER
 const db = { ...server, user: DB_NAME, password: DB_NAME, database: DB_NAME };
 
 const keys = generateKeyPairSync("rsa", {
@@ -111,17 +104,15 @@ const sql = async (query: string, as = db) => {
   }
 };
 
-// runs a backend script, in its own process group so killing it takes tsx's
-// node child down too
 const backendScript = (script: string, args: string[] = []) =>
   spawn("pnpm", ["exec", "tsx", script, ...args], {
     cwd: backendDir,
     env: backendEnv,
     stdio: ["ignore", "pipe", "inherit"],
+    // own process group so process.kill(-pid) also kills tsx's node child
     detached: true,
   });
 
-// seed.ts prints the seeded ids as json on its last line
 const seed = async () => {
   const child = backendScript("src/seed.ts", ["starter-pack"]);
   let output = "";
@@ -136,8 +127,7 @@ const seed = async () => {
   return seeded.timetables;
 };
 
-// another run's server on the port would answer in place of this run's, so
-// stop before starting anything, and leave whatever holds it alone
+// fail fast if a port is taken so we don't shoot another run's server
 const ensureFree = (port: number, variable: string) =>
   new Promise<void>((done, fail) => {
     const probe = createServer()
@@ -165,9 +155,7 @@ const waitForBackend = async (backend: ChildProcess) => {
   throw new Error("backend never came up");
 };
 
-// like networkidle, but with a much shorter quiet window than playwright's
-// fixed 500ms, and the dom has to stop changing too: requests can all be done
-// while react is still rendering their results
+// faster than playwright's 500ms networkidle and waits for react DOM updates too
 const QUIET_MS = 100;
 const trackRequests = async (page: Page) => {
   await page.addInitScript(() => {
@@ -199,8 +187,7 @@ const trackRequests = async (page: Page) => {
         throw new Error(`${page.url()} never settled`);
       }
       if (inflight === 0 && performance.now() - last >= QUIET_MS) {
-        // a skeleton means something is still loading, even if nothing has
-        // been asked for yet
+        // keep waiting while loading skeletons are mounted
         const domQuiet = await page.evaluate(() =>
           document.querySelector("[data-skeleton]")
             ? 0
@@ -213,7 +200,6 @@ const trackRequests = async (page: Page) => {
   };
 };
 
-// the themes next to each other in one png, so a review sees both at once
 const GAP = 32;
 const sideBySide = async (shots: Buffer[], path: string) => {
   const sizes = await Promise.all(shots.map((shot) => sharp(shot).metadata()));
@@ -233,16 +219,13 @@ const sideBySide = async (shots: Buffer[], path: string) => {
     },
   })
     .composite(placed)
-    // screenshots are opaque, and the slowest compression is still quick at
-    // this size and keeps the pngs smaller than chromium's
+    // opaque pngs compress smaller at level 9 than chromium's output
     .removeAlpha()
     .png({ compressionLevel: 9 })
     .toFile(path);
 };
 
-// a hidden part keeps its box, so the layout around it doesn't move, but its
-// contents go invisible and a hatch fills it in, so it reads as hidden on
-// purpose rather than broken
+// keep hidden parts' layout box intact and hatch over them instead of collapsing
 const hiding = (parts: Part[] = []) =>
   parts
     .map(
@@ -256,10 +239,6 @@ const hiding = (parts: Part[] = []) =>
     )
     .join("");
 
-// chrome's fullPage capture can drop a scroll container's horizontal offset
-// (the phone side menu's tab track lands back on its first tab), so while a
-// shot is taken each offset is held as a translate of the scrolled content
-// instead. the page doesn't see that, see holdDuringShots
 type Pinned = {
   el: HTMLElement;
   left: number;
@@ -275,6 +254,8 @@ declare global {
   }
 }
 
+// chrome's fullPage capture can reset horizontal scrollLeft (e.g. phone tab
+// track), so freeze the offset as a translate while shooting
 const pinScroll = (page: Page) =>
   page.evaluate(() => {
     window.shooting = true;
@@ -296,8 +277,7 @@ const pinScroll = (page: Page) =>
       window.pinned.push({ el, left, snap: el.style.scrollSnapType, children });
       el.style.scrollSnapType = "none";
       el.scrollLeft = 0;
-      // the reduced-motion styles give everything a tiny transition, and a
-      // translate left mid-transition stays stuck after the shot
+      // reduced-motion still leaves a tiny transition that traps translate mid-flight
       for (const { child } of children) {
         child.style.transition = "none";
         child.style.translate = `${-left}px 0`;
@@ -321,11 +301,8 @@ const unpinScroll = (page: Page) =>
     window.shooting = false;
   });
 
-// a full-page shot resizes the viewport for the shot, and pinScroll scrolls,
-// so while one is taken the page gets no scroll or resize events and resize
-// observers wait. otherwise it moves things mid-shot: the phone sheet resizes
-// for a keyboard when its search box has focus, and the tabs move their
-// underline to the pinned offset
+// suppress scroll/resize/ResizeObserver while fullPage + pinScroll mutate the
+// viewport, or the phone sheet and tab underline react mid-shot
 const holdDuringShots = () => {
   const hold = (e: Event) => {
     if (window.shooting) e.stopImmediatePropagation();
@@ -333,8 +310,7 @@ const holdDuringShots = () => {
   for (const type of ["scroll", "scrollend", "resize"]) {
     window.addEventListener(type, hold, { capture: true });
   }
-  // there's no keyboard, so the visual viewport only resizes for shots, and
-  // the phone sheet would size itself to that
+  // no virtual keyboard here, so any visualViewport resize is from screenshots
   window.visualViewport?.addEventListener("resize", (e) =>
     e.stopImmediatePropagation(),
   );
@@ -353,7 +329,6 @@ const shoot = async (
   announcementIds: string[],
 ) => {
   const users = Object.fromEntries(scenario.users.map((u) => [u.key, u]));
-  // pin some args for determinism in rendering
   const browser = await chromium.launch({
     args: [
       "--disable-gpu",
@@ -430,12 +405,11 @@ const shoot = async (
       await settle();
     }
     await page.evaluate(() => document.fonts.ready);
-    // the theme follows prefers-color-scheme live, so every theme comes out of
-    // one page load instead of loading the page again for each
+    // reuse one page load across themes since prefers-color-scheme updates live
     const shots: Buffer[] = [];
     for (const theme of THEMES) {
       if (theme !== THEMES[0]) {
-        // the dom was already quiet, so wait for the theme to land first
+        // wait for the theme class to land since the dom was already quiet
         await setTheme(page, theme);
         await settle();
       }
@@ -455,9 +429,7 @@ const shoot = async (
     console.log(`shot ${synthetic.name}/${device}`);
   };
 
-  // one shared queue instead of a synthetic at a time, so nothing waits on the
-  // slowest variant of each synthetic. the run is cpu bound, so more pages
-  // than cores only slows it down
+  // shared work queue capped at core count since rendering is cpu-bound
   const concurrency = availableParallelism();
   let next = 0;
   await Promise.all(
@@ -472,7 +444,6 @@ const main = async () => {
   await ensureFree(BACKEND_PORT, "SYNTHETICS_BACKEND_PORT");
   await ensureFree(FRONTEND_PORT, "SYNTHETICS_FRONTEND_PORT");
 
-  // the frontend doesn't need the database, so it builds while that's set up
   process.env.VITE_FRONTEND_URL = FRONTEND_URL;
   const built = build({ root: frontendDir, logLevel: "warn" });
 
