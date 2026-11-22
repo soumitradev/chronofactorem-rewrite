@@ -1,4 +1,16 @@
+import { readFile } from "node:fs/promises";
 import type { Page } from "playwright";
+
+export const THEMES = ["light", "dark"] as const;
+export type Theme = (typeof THEMES)[number];
+
+export const setTheme = async (page: Page, theme: Theme) => {
+  await page.emulateMedia({ colorScheme: theme });
+  await page.waitForFunction(
+    (name) => document.documentElement.classList.contains(name),
+    theme,
+  );
+};
 
 // one synthetic = one screen worth looking at. Currently written for the starter-pack
 // seed scenario. `as` is a user key from that scenario, or the email of someone
@@ -33,7 +45,7 @@ const openMenu = async (page: Page) => {
   if (await menu.isVisible()) await menu.click();
 };
 
-const openTab = async (page: Page, name: string) => {
+const openTab = (name: string) => async (page: Page) => {
   await openMenu(page);
   await page.getByRole("tab", { name }).click();
 };
@@ -44,6 +56,23 @@ const search = async (page: Page, term: string) => {
   await openMenu(page);
   await page.getByRole("searchbox", { name: "Search Courses" }).fill(term);
   await page.waitForURL((url) => url.searchParams.get("q") === term);
+};
+
+const openCourse = async (page: Page, code: string, title: string) => {
+  await search(page, code);
+  await page.getByText(title).first().click();
+  await page.getByRole("heading", { name: title }).waitFor();
+};
+
+const openAddedCourse = async (page: Page, name: RegExp, code: string) => {
+  await openMenu(page);
+  // grid blocks share the course name, so stay inside the menu
+  await page.getByRole("tabpanel").getByRole("button", { name }).click();
+  const removeButton = page.getByRole("button", {
+    name: `Remove ${code} from timetable`,
+  });
+  await removeButton.waitFor();
+  return removeButton;
 };
 
 // the desktop grid with days across; phones and tablets have no toggle
@@ -69,9 +98,7 @@ export const synthetics: Synthetic[] = [
     unreadAnnouncements: true,
     // the toast closes itself after a few seconds, hovering keeps it open
     // for each theme's shot
-    act: async (page) => {
-      await page.getByText("New Announcements", { exact: true }).hover();
-    },
+    act: (page) => page.getByText("New Announcements", { exact: true }).hover(),
   },
   { name: "home-empty", as: "esha", url: "/", hide: ["navbar"] },
   { name: "home-higher-degree", as: "hd", url: "/", hide: ["navbar"] },
@@ -113,22 +140,14 @@ export const synthetics: Synthetic[] = [
     as: "alice",
     url: "/edit/{alice-packed}",
     hide: ["navbar", "timetable-header", "grid"],
-    act: async (page) => {
-      await search(page, "CS F");
-    },
+    act: (page) => search(page, "CS F"),
   },
   {
     name: "edit-course-clashes",
     as: "alice",
     url: "/edit/{alice-packed}",
     hide: ["navbar", "timetable-header", "grid"],
-    act: async (page) => {
-      await search(page, "CS F407");
-      await page.getByText("Artificial Intelligence").first().click();
-      await page
-        .getByRole("heading", { name: "Artificial Intelligence" })
-        .waitFor();
-    },
+    act: (page) => openCourse(page, "CS F407", "Artificial Intelligence"),
   },
   {
     name: "edit-search-focus",
@@ -146,11 +165,7 @@ export const synthetics: Synthetic[] = [
     url: "/edit/{alice-packed}",
     hide: ["navbar", "timetable-header", "grid"],
     act: async (page) => {
-      await search(page, "CS F407");
-      await page.getByText("Artificial Intelligence").first().click();
-      await page
-        .getByRole("heading", { name: "Artificial Intelligence" })
-        .waitFor();
+      await openCourse(page, "CS F407", "Artificial Intelligence");
       await page.getByRole("button", { name: "Back" }).hover();
     },
   },
@@ -194,9 +209,7 @@ export const synthetics: Synthetic[] = [
     as: "hd",
     url: "/edit/{hd-draft}",
     hide: ["navbar", "timetable-header", "grid"],
-    act: async (page) => {
-      await openTab(page, "Exams");
-    },
+    act: openTab("Exams"),
   },
   {
     name: "edit-long-course-name-warnings",
@@ -213,9 +226,7 @@ export const synthetics: Synthetic[] = [
     as: "alice",
     url: "/edit/{alice-packed}",
     hide: ["navbar", "timetable-header", "grid"],
-    act: async (page) => {
-      await openMenu(page);
-    },
+    act: openMenu,
   },
   {
     name: "edit-course-added",
@@ -223,15 +234,7 @@ export const synthetics: Synthetic[] = [
     url: "/edit/{alice-packed}",
     hide: ["navbar", "timetable-header", "grid"],
     act: async (page) => {
-      await openMenu(page);
-      // grid blocks share the course name, so stay inside the menu
-      await page
-        .getByRole("tabpanel")
-        .getByRole("button", { name: /^Object Oriented Prog/ })
-        .click();
-      await page
-        .getByRole("button", { name: "Remove CS F213 from timetable" })
-        .waitFor();
+      await openAddedCourse(page, /^Object Oriented Prog/, "CS F213");
     },
   },
   {
@@ -257,15 +260,12 @@ export const synthetics: Synthetic[] = [
         );
         return route.fulfill({ response, json: timetable });
       });
-      await openMenu(page);
-      // grid blocks share the course name, so stay inside the menu
-      await page
-        .getByRole("tabpanel")
-        .getByRole("button", { name: /^Object Oriented Prog/ })
-        .click();
-      await page
-        .getByRole("button", { name: "Remove CS F213 from timetable" })
-        .click();
+      const removeButton = await openAddedCourse(
+        page,
+        /^Object Oriented Prog/,
+        "CS F213",
+      );
+      await removeButton.click();
       await page.getByText("Added · 8", { exact: true }).waitFor();
       // hovering keeps the toast open for each theme's shot
       await page.getByText("Removed CS F213", { exact: true }).hover();
@@ -276,9 +276,7 @@ export const synthetics: Synthetic[] = [
     as: "alice",
     url: "/edit/{alice-packed}",
     hide: ["navbar", "timetable-header", "grid"],
-    act: async (page) => {
-      await openTab(page, "Exams");
-    },
+    act: openTab("Exams"),
   },
   {
     name: "finalize",
@@ -302,20 +300,14 @@ export const synthetics: Synthetic[] = [
     act: async (page) => {
       await vertical(page);
       const images: string[] = [];
-      for (const theme of ["light", "dark"] as const) {
-        await page.emulateMedia({ colorScheme: theme });
-        await page.waitForFunction(
-          (theme) => document.documentElement.classList.contains(theme),
-          theme,
-        );
-        const download = page.waitForEvent("download");
+      for (const theme of THEMES) {
+        await setTheme(page, theme);
+        const downloadPromise = page.waitForEvent("download");
         await page.getByRole("button", { name: "PNG" }).first().click();
-        const file = await (await download).createReadStream();
-        const chunks: Buffer[] = [];
-        for await (const chunk of file) chunks.push(chunk as Buffer);
-        images.push(Buffer.concat(chunks).toString("base64"));
+        const download = await downloadPromise;
+        images.push(await readFile(await download.path(), "base64"));
       }
-      await page.emulateMedia({ colorScheme: "light" });
+      await page.emulateMedia({ colorScheme: THEMES[0] });
       const img = (png: string) =>
         `<img style="display:block;width:100%" src="data:image/png;base64,${png}">`;
       // both theme classes, so the runner's wait for each theme passes

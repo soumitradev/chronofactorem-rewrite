@@ -11,7 +11,7 @@ import { build, preview } from "vite";
 import scenario from "../backend/src/seed/scenarios/starter-pack.json" with {
   type: "json",
 };
-import { type Part, synthetics } from "./synthetics.ts";
+import { type Part, setTheme, synthetics, THEMES } from "./synthetics.ts";
 
 const root = resolve(import.meta.dirname, "..");
 const backendDir = resolve(root, "backend");
@@ -37,7 +37,6 @@ const DEVICES = {
   "ipad-mini": devices["iPad Mini"],
   "laptop-1366": { viewport: { width: 1366, height: 768 } },
 };
-const THEMES = ["light", "dark"] as const;
 
 // dropped and recreated on every run, so it has to look like a synthetics
 // database, never a real one
@@ -427,12 +426,8 @@ const shoot = async (
     const shots: Buffer[] = [];
     for (const theme of THEMES) {
       if (theme !== THEMES[0]) {
-        await page.emulateMedia({ colorScheme: theme });
         // the dom was already quiet, so wait for the theme to land first
-        await page.waitForFunction(
-          (theme) => document.documentElement.classList.contains(theme),
-          theme,
-        );
+        await setTheme(page, theme);
         await settle();
       }
       await pinScroll(page);
