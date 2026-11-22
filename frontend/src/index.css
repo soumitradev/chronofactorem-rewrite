@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
-/* Outfit for UI copy, DM Mono for codes, rooms, and times. */
+/* Outfit for UI copy, DM Mono for codes, rooms, and times */
 @font-face {
   font-family: "Outfit";
   font-style: normal;
@@ -26,7 +26,7 @@
   src: url("/fonts/dm-mono-500-latin.woff2") format("woff2");
 }
 
-/* Warm paper light palette and dark slate neutral chrome. */
+/* warm paper light palette and dark slate neutral chrome */
 :root {
   color-scheme: light;
   --bg: #f6f4ef;
@@ -273,12 +273,9 @@
     }
   }
 
-  /* the navbar holds still while the page slides under it, and only
-  crossfades what changed (the active link, the create button). only while
-  it sits at the top of both pages (data-navbar-still, lib/viewTransitions.ts),
-  since a scrolled page would make it jump. an open dialog's scrim covers it,
-  and a named navbar would paint above the scrim, so it slides with the page
-  then */
+  /* the navbar holds still while the page slides under it, but only at the
+  top of both pages (data-navbar-still), or it would jump. a named navbar
+  would paint above an open dialog's scrim, so it slides with the page then */
   html[data-navbar-still]:active-view-transition-type(forward, back):not(
     :has([role="dialog"], [role="alertdialog"])
   ) .app-navbar {
@@ -292,15 +289,10 @@
     animation-duration: var(--d-3);
   }
 
-  /* the crux mark (CruxMark) holds still like the navbar, so the page slides
-  under it, and it fades on its own when only one of the pages has it.
-  a named group always paints over the root, so the mark would cover the
-  sliding text. it can't go under the root instead: the root snapshot
-  carries the page background, and making that transparent shows the
-  browser's own white. so it blends in. on every channel the tint is darker
-  than the background in light and lighter in dark, so darken (light) and
-  lighten (dark) give exactly the tint over the background and let the ink,
-  which is further from the background than the tint, through unchanged */
+  /* the crux mark holds still like the navbar. its named group paints over
+  the sliding text, and can't go under the root, whose snapshot carries the
+  page background, so it blends: the tint is darker than the background in
+  light and lighter in dark, so darken/lighten keep the tint and let ink through */
   html:active-view-transition-type(forward, back) .crux-mark {
     view-transition-name: crux-mark;
   }
@@ -403,8 +395,8 @@ html.theme-transition * {
   transition: transform var(--d-3) var(--e-out);
 }
 
-/* the dot pulses once in the first 30% of each 4s cycle; PR 1's reduced-motion
-   rule turns that into a single instant run */
+/* the dot pulses once in the first 30% of each 4s cycle; under reduced motion
+   it runs once, instantly */
 .now-dot {
   animation: now-pulse 4s infinite;
 }
@@ -531,7 +523,7 @@ html.theme-transition * {
   border-radius: inherit;
   border: 2px solid var(--accent);
   pointer-events: none;
-  /* Starts once the push transition that landed here has played. */
+  /* starts once the push transition that landed here has played */
   animation: cf-ring-pulse 600ms var(--e-out) var(--d-3) 1 both;
 }
 
@@ -575,8 +567,8 @@ html.theme-transition * {
 
 /* Timetable surfaces */
 
-/* The picker's ghost block fades in on mount and out before it unmounts.
-   Opaque blend so a same-slot swap cleanly covers the outgoing tile beneath. */
+/* the picker's ghost block fades in on mount and out before it unmounts;
+   opaque, so a same-slot swap covers the outgoing tile beneath */
 .tt-ghost {
   opacity: 0;
   background-color: color-mix(in oklab, var(--ev) 45%, var(--surface));
@@ -636,8 +628,8 @@ html.theme-transition * {
   }
 }
 
-/* Sections animate in and out (spec §9). The surface tags each block with
-   data-presence; the export never gets "entering" or "leaving". */
+/* sections animate in and out by their data-presence; the export never gets
+   "entering" or "leaving" */
 [data-presence] {
   transition:
     opacity var(--d-2) var(--e-out),
@@ -676,8 +668,8 @@ html.theme-transition * {
   }
 }
 
-/* Same-route surface transitions (spec §9, C7). Names exist only while their
-   transition runs, so route transitions and the export never see them. */
+/* same-route surface transitions. names exist only while their transition
+   runs, so route transitions and the export never see them */
 @keyframes tt-day-scroll-out {
   to {
     transform: translateY(var(--tt-day-scroll, 0px));

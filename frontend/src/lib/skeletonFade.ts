@@ -6,12 +6,8 @@ import { prefersReducedMotion } from "./viewTransitions";
 // page that replaced it; cleared once that commit is done
 let leaving: { page: string; node: HTMLElement; rect: DOMRect } | null = null;
 
-/**
- * A ref for a page skeleton's root. When the skeleton leaves, it notes where
- * it was, so the page that replaces it can fade it out on top of itself
- * (useSkeletonCrossfade). Make one per page at module scope, so React keeps
- * the same ref.
- */
+// notes where a page skeleton was as it leaves, for useSkeletonCrossfade. make
+// one per page at module scope, so React keeps the same ref
 export const skeletonRef =
   (page: string) => (node: HTMLElement | null) => () => {
     if (!node) return;
@@ -23,13 +19,9 @@ export const skeletonRef =
     });
   };
 
-/**
- * Crossfades from `page`'s skeleton to the page: when the skeleton leaves in
- * the same commit as the page renders, a copy of it is laid over the page
- * and faded out, so its blocks dissolve into the content they stood for.
- * A skeleton that was never shown (fast loads, where the route's view
- * transition is the motion) leaves nothing to fade.
- */
+// fades a copy of the skeleton out over the page that replaced it. a skeleton
+// that was never shown (fast loads, where the route transition is the motion)
+// leaves nothing to fade
 export function useSkeletonCrossfade(page: string) {
   useLayoutEffect(() => {
     if (leaving?.page !== page) return;
@@ -59,13 +51,8 @@ export function useSkeletonCrossfade(page: string) {
   });
 }
 
-/**
- * For skeletons inside a page (a course's sections, announcements): fades
- * the content in when it arrives in a skeleton's place, but not when the
- * data was already there. Put `className` on what replaced the skeleton, and
- * `onAnimationEnd` on one of those, so the fade doesn't replay when the
- * content mounts again later.
- */
+// fades content in only when it replaced a skeleton. put `className` on that
+// content and `onAnimationEnd` on one of it, so a later remount doesn't replay
 export function useSkeletonFadeIn(loading: boolean) {
   const [waited, setWaited] = useState(loading);
   if (loading && !waited) setWaited(true);

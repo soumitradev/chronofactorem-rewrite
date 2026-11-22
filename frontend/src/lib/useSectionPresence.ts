@@ -6,12 +6,8 @@ export type Presence = "present" | "entering" | "leaving";
 
 const LEAVE_MS = 200; // --d-2
 
-/**
- * Tags each section as it comes and goes. A section id that wasn't in the
- * previous `sections` is `entering`; one that disappeared stays in the list as
- * `leaving` for --d-2 so it can animate out. Nothing is tagged on the first
- * render, and `disabled` (export) returns everything `present`.
- */
+// a removed section stays in the list as `leaving` for --d-2 so it can animate
+// out; nothing is tagged on the first render or with `disabled` (export)
 export function useSectionPresence(
   sections: TimetableSectionType[],
   opts: { disabled: boolean },

@@ -5,7 +5,6 @@ import type { TimetableSearch } from "./timetableSearch";
 export const prefersReducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/** Whether `document.startViewTransition({ types })` is understood. */
 export const supportsTransitionTypes = () =>
   typeof document.startViewTransition === "function" &&
   typeof ViewTransition !== "undefined" &&
@@ -15,11 +14,8 @@ export const supportsTransitionTypes = () =>
 const tsrIndex = (location: ParsedLocation) =>
   (location.state as { __TSR_index?: number }).__TSR_index ?? 0;
 
-/**
- * Whether a search-only move swaps the course panel: a different course (or
- * none), or one open sheet replaced by another. A sheet opening or closing
- * is the sheet's own motion, so it never slides the panel.
- */
+// a sheet opening or closing is the sheet's own motion, so only a course
+// change or one sheet replacing another slides the panel
 export const panelMoved = (a: TimetableSearch, b: TimetableSearch): boolean => {
   if (!!a.sheet !== !!b.sheet) return false;
   return (
@@ -30,10 +26,8 @@ export const panelMoved = (a: TimetableSearch, b: TimetableSearch): boolean => {
 
 let sheetClosePending = false;
 
-/**
- * Marks the next history pop as part of closing the sheet, so it does not
- * slide the course panel under the sheet's own exit. Self-clears.
- */
+// the next history pop closes the sheet, so it mustn't slide the course panel
+// under the sheet's own exit
 export function markSheetClosing(): void {
   sheetClosePending = true;
   setTimeout(() => {
@@ -41,15 +35,8 @@ export function markSheetClosing(): void {
   }, 1000);
 }
 
-/**
- * View transition types for router navigations without explicit types. In-app
- * search moves pass `viewTransition: false` (or their own types), so in
- * practice this covers route changes and history pops. Search-only pops that
- * move the course panel slide it; other search-only moves and reduced-motion
- * users get no transition. Route changes also morph the timetable title and
- * grid (`shared-timetable`), except into a different timetable, such as a
- * fresh copy, whose page should replace the old one whole.
- */
+// the router default, so only route changes and history pops land here. a
+// different timetable (a fresh copy) replaces the page whole instead of morphing
 export function routeTransitionTypes(info: {
   fromLocation?: ParsedLocation;
   toLocation: ParsedLocation;
@@ -83,21 +70,13 @@ export function routeTransitionTypes(info: {
   return types;
 }
 
-/**
- * The navbar holds still through a route slide only while it sits at the top
- * of both pages; otherwise it would jump between them. `routeTransitionTypes`
- * marks it from the old page's scroll, and this unmarks it once the new page
- * has restored its scroll, before the new snapshot is taken.
- */
+// the navbar holds still only while it sits at the top of both pages, or it
+// would jump; runs once the new page restores its scroll, before its snapshot
 export function releaseStillNavbar(): void {
   if (window.scrollY !== 0)
     document.documentElement.removeAttribute("data-navbar-still");
 }
 
-/**
- * Runs `apply` inside a circular-reveal view transition growing from `origin`.
- * Falls back to calling `apply` directly when unsupported or reduced motion.
- */
 export function startThemeTransition(
   apply: () => void,
   origin: { x: number; y: number },
@@ -124,7 +103,6 @@ export function startThemeTransition(
   transition.finished.then(cleanup, cleanup);
 }
 
-/** Same-route timetable surface changes (spec §9). */
 export type SurfaceTransition =
   | "day-next"
   | "day-prev"
@@ -133,11 +111,7 @@ export type SurfaceTransition =
   | "panel-forward"
   | "panel-back";
 
-/**
- * Runs `update` inside a typed view transition. Without support for types, or
- * under reduced motion, `update` simply runs. `update` must commit the DOM
- * synchronously (wrap React state in `flushSync`).
- */
+// `update` must commit the DOM synchronously (wrap React state in flushSync)
 export function startSurfaceTransition(
   type: SurfaceTransition,
   update: () => void,

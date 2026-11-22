@@ -20,8 +20,8 @@ interface TabsProps<T extends string> {
   panelClassName?: string
 }
 
-// Panels sit side by side on a scroll-snap track, so a sideways swipe switches
-// too. The value only changes once the track comes to rest.
+// panels sit side by side on a scroll-snap track, so a sideways swipe switches
+// too; the value only changes once the track comes to rest
 function Tabs<T extends string>({
   value,
   onValueChange,
