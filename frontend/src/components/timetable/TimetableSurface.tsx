@@ -2,11 +2,11 @@ import { useEffect, useMemo, useRef } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 import { useTimetableState } from "@/context";
 import { courseHues as computeCourseHues } from "@/lib/courseHues";
+import { formatClock } from "@/lib/formatTime";
 import { useFadingValue } from "@/lib/sectionPreview";
 import { useNow } from "@/lib/useNow";
 import { useSectionPresence } from "@/lib/useSectionPresence";
 import { useSwipe } from "@/lib/useSwipe";
-import { formatNow } from "@/utils/timeFormat";
 import type { TimetableSectionType } from "@/utils/timetable";
 import {
   buildTimetableGrid,
@@ -145,7 +145,7 @@ export function TimetableSurface({
               ? {
                   hour: pos.hour,
                   fraction: pos.fraction,
-                  label: formatNow(date),
+                  label: formatClock(date),
                 }
               : null
           }
