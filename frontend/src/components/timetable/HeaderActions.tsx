@@ -46,6 +46,34 @@ import { router } from "../../router";
 
 type Layout = "phone" | "desktop";
 
+// a disabled button gets no focus or hover, so its wrapper carries the tooltip
+function DisabledTooltip({
+  reason,
+  delayDuration,
+  children,
+}: {
+  reason: string;
+  delayDuration?: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <Tooltip delayDuration={delayDuration}>
+      <TooltipTrigger asChild>
+        <span
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: the disabled button inside can't take focus
+          tabIndex={0}
+          className="cursor-not-allowed rounded-md"
+        >
+          {children}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>{reason}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 /** Phone: the ⚠ count beside the meta line. Opens the warnings sheet. */
 export function WarningsChip() {
   const { count } = useWarningsSummary();
@@ -170,22 +198,11 @@ export function PublishButton({ layout }: { layout: Layout }) {
         </Button>
       );
     return (
-      <Tooltip delayDuration={100}>
-        <TooltipTrigger asChild>
-          <span
-            // biome-ignore lint/a11y/noNoninteractiveTabindex: a disabled button gets no focus or hover, so its wrapper carries the tooltip
-            tabIndex={0}
-            className="cursor-not-allowed rounded-md"
-          >
-            <Button variant="primary" size="sm" disabled className={fade}>
-              {content}
-            </Button>
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>{reason}</p>
-        </TooltipContent>
-      </Tooltip>
+      <DisabledTooltip reason={reason} delayDuration={100}>
+        <Button variant="primary" size="sm" disabled className={fade}>
+          {content}
+        </Button>
+      </DisabledTooltip>
     );
   }
 
@@ -367,19 +384,8 @@ export function CopyButton() {
   );
   if (!timetable.archived) return button;
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span
-          // biome-ignore lint/a11y/noNoninteractiveTabindex: a disabled button gets no focus or hover, so its wrapper carries the tooltip
-          tabIndex={0}
-          className="cursor-not-allowed rounded-md"
-        >
-          {button}
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>
-        <p>Cannot copy archived timetable</p>
-      </TooltipContent>
-    </Tooltip>
+    <DisabledTooltip reason="Cannot copy archived timetable">
+      {button}
+    </DisabledTooltip>
   );
 }
