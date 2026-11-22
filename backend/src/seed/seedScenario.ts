@@ -77,15 +77,12 @@ export const seedScenario = async (scenario: Scenario) => {
     throw new Error("scenarios can only be seeded into an empty database");
   }
 
-  const queryRunner = AppDataSource.createQueryRunner();
-  await queryRunner.connect();
   await ingestJSON(
     (scenario.courses
       ? { metadata: timetableJSON.metadata, courses: scenario.courses }
       : timetableJSON) as Parameters<typeof ingestJSON>[0],
-    queryRunner,
+    false,
   );
-  await queryRunner.release();
 
   const sectionIds = new Map<string, string>();
   for (const section of await manager.find(Section, {

@@ -4,14 +4,8 @@ import timetableJSON from "./timetable.json" with { type: "json" };
 
 initializeDataSource()
   .then(async () => {
-    console.log("connecting to db...");
-    const queryRunner = AppDataSource.createQueryRunner();
-    await queryRunner.connect();
-    console.log("connected!");
-
-    await ingestJSON(timetableJSON, queryRunner);
-
-    await queryRunner.release();
+    console.log("connected to db!");
+    await ingestJSON(timetableJSON, process.argv[2] === "--overwrite");
     await AppDataSource.destroy();
   })
   .catch(async (error) => {

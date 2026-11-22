@@ -1,5 +1,6 @@
 import type { sectionTypeEnum } from "lib";
-import { type QueryRunner, Raw } from "typeorm";
+import { Raw } from "typeorm";
+import { AppDataSource } from "./db.js";
 import { Course, Section, Timetable } from "./entity/entities.js";
 
 interface ExamJSON {
@@ -29,23 +30,19 @@ interface TimetableJSON {
   };
 }
 
+// runs in one transaction, so a throw anywhere rolls the whole ingestion back
 export const ingestJSON = async (
   timetableJSON: TimetableJSON,
-  queryRunner: QueryRunner,
+  overwrite: boolean,
 ) => {
-  try {
-    await queryRunner.startTransaction();
-
-    console.time("ingestion took");
-
+  console.time("ingestion took");
+  const summary = await AppDataSource.transaction(async (manager) => {
     const year = timetableJSON.metadata.acadYear;
     const semester = timetableJSON.metadata.semester;
-    const forceOverwrite = process.argv[2] === "--overwrite";
     let archivedCoursesUpdateCount = 0;
     let archivedTimetablesUpdateCount = 0;
     let archivedTimetablesDeleteCount = 0;
 
-    const manager = queryRunner.manager;
     const latestCourse = await manager
       .createQueryBuilder(Course, "course")
       .orderBy("course.acad_year", "DESC")
@@ -59,24 +56,18 @@ export const ingestJSON = async (
       };
 
       if (latestCourse.acadYear > year) {
-        console.error(
-          `error: timetable.json is outdated; latest course academic year is ${latestCourse.acadYear} while the timetable is of academic year ${year}`,
-        );
-        throw Error(
+        throw new Error(
           `error: timetable.json is outdated; latest course academic year is ${latestCourse.acadYear} while the timetable is of academic year ${year}`,
         );
       }
       if (latestCourse.acadYear === year) {
         if (latestCourse.semester > semester) {
-          console.error(
-            `error: timetable.json is outdated; latest course academic year is ${latestCourse.acadYear} and semester is ${latestCourse.semester} while the timetable is of academic year ${year} and semester ${semester}`,
-          );
-          throw Error(
+          throw new Error(
             `error: timetable.json is outdated; latest course academic year is ${latestCourse.acadYear} and semester is ${latestCourse.semester} while the timetable is of academic year ${year} and semester ${semester}`,
           );
         }
         if (latestCourse.semester === semester) {
-          if (!forceOverwrite) {
+          if (!overwrite) {
             console.log(
               `error: timetable.json is of same semester; latest course academic year is ${latestCourse.acadYear} and semester is ${latestCourse.semester} while the timetable is of academic year ${year} and semester ${semester}`,
             );
@@ -179,10 +170,7 @@ export const ingestJSON = async (
 
       console.log("checking if all existing courses are archived...");
       if (await manager.existsBy(Course, { archived: false })) {
-        console.error(
-          "error: not all courses in db are archived; db state inconsistent",
-        );
-        throw Error(
+        throw new Error(
           "error: not all courses in db are archived; db state inconsistent",
         );
       }
@@ -190,10 +178,7 @@ export const ingestJSON = async (
 
       console.log("checking if all existing timetables are archived...");
       if (await manager.existsBy(Timetable, { archived: false })) {
-        console.error(
-          "error: not all timetables in db are archived; db state inconsistent",
-        );
-        throw Error(
+        throw new Error(
           "error: not all timetables in db are archived; db state inconsistent",
         );
       }
@@ -261,18 +246,23 @@ export const ingestJSON = async (
       .execute();
     console.log("sections inserted!");
 
-    await queryRunner.commitTransaction();
-    console.log("================= SUMMARY =================");
-    console.log(`courses archived: ${archivedCoursesUpdateCount}`);
-    console.log(`timetables archived: ${archivedTimetablesUpdateCount}`);
-    console.log(
-      `timetables deleted while archiving: ${archivedTimetablesDeleteCount}`,
-    );
-    console.log(`courses inserted: ${courseInsertResult.identifiers.length}`);
-    console.log(`sections inserted: ${sectionInsertResult.identifiers.length}`);
-    console.timeEnd("ingestion took");
-  } catch (err) {
-    await queryRunner.rollbackTransaction();
-    console.log(`error! err: ${err}`);
-  }
+    return {
+      archivedCoursesUpdateCount,
+      archivedTimetablesUpdateCount,
+      archivedTimetablesDeleteCount,
+      coursesInserted: courseInsertResult.identifiers.length,
+      sectionsInserted: sectionInsertResult.identifiers.length,
+    };
+  });
+  if (summary === undefined) return;
+
+  console.log("================= SUMMARY =================");
+  console.log(`courses archived: ${summary.archivedCoursesUpdateCount}`);
+  console.log(`timetables archived: ${summary.archivedTimetablesUpdateCount}`);
+  console.log(
+    `timetables deleted while archiving: ${summary.archivedTimetablesDeleteCount}`,
+  );
+  console.log(`courses inserted: ${summary.coursesInserted}`);
+  console.log(`sections inserted: ${summary.sectionsInserted}`);
+  console.timeEnd("ingestion took");
 };
