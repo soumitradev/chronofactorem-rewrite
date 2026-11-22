@@ -14,19 +14,10 @@ const badgeVariants = cva(
         pill: "rounded-sm border-transparent bg-sunk px-1.5 py-0.5 font-mono text-[11px] font-medium text-ink-muted",
         "pill-ghost":
           "rounded-sm border-dashed border-ink-faint bg-transparent px-1.5 py-0.5 font-mono text-[11px] font-medium text-ink-muted",
-        // Legacy names.
-        default:
-          "rounded-full border-transparent bg-brand px-2.5 py-0.5 text-sm font-medium text-brand-ink",
-        secondary:
-          "rounded-full border-transparent bg-sunk px-2.5 py-0.5 text-sm font-medium text-ink",
-        destructive:
-          "rounded-full border-transparent bg-danger px-2.5 py-0.5 text-sm font-medium text-danger-ink",
-        outline:
-          "rounded-full border-line px-2.5 py-0.5 text-sm font-medium text-ink",
       },
     },
     defaultVariants: {
-      variant: "default",
+      variant: "chip",
     },
   }
 )

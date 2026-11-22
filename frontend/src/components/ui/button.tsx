@@ -17,14 +17,6 @@ const buttonVariants = cva(
         danger: "bg-danger text-danger-ink hover:opacity-90",
         tint: "bg-brand-bg text-brand hover:opacity-88",
         link: "text-ink underline-offset-4 hover:underline [@media(hover:hover)_and_(pointer:fine)]:hover:translate-y-0",
-        // Legacy names, same look as their new counterparts.
-        default: "bg-brand text-brand-ink hover:opacity-88",
-        destructive: "bg-danger text-danger-ink hover:opacity-90",
-        outline:
-          "border border-line bg-surface text-ink hover:border-ink/25 hover:bg-sunk",
-        ghost:
-          "bg-transparent text-ink-muted hover:bg-sunk hover:text-ink [@media(hover:hover)_and_(pointer:fine)]:hover:translate-y-0",
-        card: "border border-line bg-surface text-ink hover:border-ink/25 hover:bg-sunk",
       },
       size: {
         default:
