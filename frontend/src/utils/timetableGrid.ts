@@ -2,6 +2,8 @@ import type { TimetableSectionType } from "./timetable";
 
 export const GRID_START_HOUR = 8;
 export const GRID_HOURS = 13;
+export const MIN_DAYS = 5;
+export const MIN_HOURS = 9;
 
 export const timetableDays = ["M", "T", "W", "Th", "F", "S"];
 export const timetableDayNames = [
@@ -48,8 +50,8 @@ function parseTiming(entry: string) {
 
 export function buildTimetableGrid(sections: TimetableSectionType[]) {
   const slots = new Map<string, TimetableCell>();
-  let dayCount = 5;
-  let hourCount = 9;
+  let dayCount = MIN_DAYS;
+  let hourCount = MIN_HOURS;
   for (const section of sections) {
     for (const time of section.roomTime) {
       const slot = parseRoomTime(time);
@@ -133,8 +135,8 @@ export function blockName(cell: TimetableCell): string {
 export function buildTimingsPreview(timings: readonly string[]) {
   // store the course code per slot so callers can tint each cell
   const filled = new Map<string, string>();
-  let dayCount = 5;
-  let hourCount = 9;
+  let dayCount = MIN_DAYS;
+  let hourCount = MIN_HOURS;
   for (const entry of timings) {
     const slot = parseTiming(entry);
     if (!slot) continue;
