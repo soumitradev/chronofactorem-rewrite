@@ -40,24 +40,17 @@ export function CoursesTab({ editable }: { editable: boolean }) {
   const { openCourse } = useTimetableNav();
   const { notFound } = useWarningsSummary();
   const timetableId = timetable?.id ?? "";
-  const { mutate: removeCourse } = useRemoveTimetableCourse(timetable?.id);
-  const pending =
-    useIsMutating({ mutationKey: ["sections", timetable?.id] }) > 0;
-  // blocks a double tap before useIsMutating catches up
-  const inFlight = useRef(false);
-  const busy = pending || inFlight.current;
+  const { mutateOnce: removeCourse, isLocked } = useRemoveTimetableCourse(
+    timetable?.id,
+  );
+  // re-renders when a section change started elsewhere settles
+  const busy =
+    useIsMutating({ mutationKey: ["sections", timetable?.id] }) > 0 ||
+    isLocked();
   const handleRemove = (courseId: string, code: string) => {
-    if (pending || inFlight.current) return;
-    inFlight.current = true;
+    if (isLocked()) return;
     haptic("selection");
-    removeCourse(
-      { courseId, code },
-      {
-        onSettled: () => {
-          inFlight.current = false;
-        },
-      },
-    );
+    removeCourse({ courseId, code });
   };
 
   const remaining = useMemo(

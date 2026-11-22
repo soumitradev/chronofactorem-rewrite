@@ -1,5 +1,5 @@
 import { createLazyRoute } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { ButtonLabel } from "@/components/ButtonLabel";
 import { CruxMark } from "@/components/CruxMark";
 import DegreeDropDown from "@/components/DegreeDropDown";
@@ -12,9 +12,7 @@ function GetDegrees() {
   const { year } = Route.useSearch();
   const [firstDegree, setFirstDegree] = useState<string | null>(null);
   const [secondDegree, setSecondDegree] = useState<string | null>(null);
-  const { mutate: createUser, isPending } = useCreateUser();
-  // isPending lags a render behind a fast double tap, so guard synchronously.
-  const submitting = useRef(false);
+  const { mutateOnce: createUser, isPending } = useCreateUser();
 
   const handleSubmit = async () => {
     if (firstDegree) {
@@ -28,18 +26,9 @@ function GetDegrees() {
         firstDegree?.includes("B") && year >= 2 && secondDegree !== "A0"
           ? [firstDegree, secondDegree]
           : [firstDegree];
-      if (submitting.current) return;
-      submitting.current = true;
       createUser(
         { degrees },
-        {
-          onError: () => {
-            submitting.current = false;
-          },
-          onSuccess: () => {
-            router.navigate({ to: "/" });
-          },
-        },
+        { onSuccess: () => router.navigate({ to: "/" }) },
       );
     } else {
       toast({
