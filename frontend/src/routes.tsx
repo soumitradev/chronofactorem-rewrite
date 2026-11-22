@@ -12,7 +12,6 @@ import { CruxMark } from "@/components/CruxMark";
 import { HomeSkeleton } from "@/components/HomeSkeleton";
 import NotFound from "@/components/NotFound";
 import { TimetablePageSkeleton } from "@/components/timetable/TimetablePageSkeleton";
-import { useToast } from "@/components/ui/use-toast";
 import { courseQueryOptions } from "@/data-access/courses";
 import { handleLoginRedirect, toastHandler } from "@/data-access/errors";
 import { timetableQueryOptions } from "@/data-access/timetables";
@@ -28,8 +27,7 @@ export const rootRoute = rootRouteWithContext<{
 });
 
 const ToastError = ({ error }: { error: Error }) => {
-  const { toast } = useToast();
-  toastHandler(error, toast);
+  toastHandler(error);
 };
 
 const loginRoute = new Route({
@@ -159,13 +157,12 @@ const timetablePageLoader = async ({
 };
 
 const TimetablePageError = ({ error }: { error: Error }) => {
-  const { toast } = useToast();
   const is404 = error instanceof AxiosError && error.response?.status === 404;
   useEffect(() => {
     if (is404) return;
     handleLoginRedirect(error);
-    toastHandler(error, toast);
-  }, [error, toast, is404]);
+    toastHandler(error);
+  }, [error, is404]);
   // a notFound() thrown here would skip notFoundComponent for the root error
   // boundary. Drafts 404 for anyone but their author, so this path is common
   if (is404) return <NotFound />;

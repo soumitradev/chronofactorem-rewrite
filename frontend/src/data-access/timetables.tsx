@@ -1,16 +1,10 @@
-import {
-  queryOptions,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { timetableWithSectionsType } from "lib";
 import type z from "zod";
 import { ToastAction } from "@/components/ui/toast";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import { HapticTap, haptic } from "@/lib/haptics";
-import chronoAPI from "./axios";
-import { toastHandler } from "./errors";
+import chronoAPI, { useApiMutation } from "./axios";
 
 const fetchTimetable = async (timetableId: string) => {
   const response = await chronoAPI.get<
@@ -28,9 +22,8 @@ export const timetableQueryOptions = (id: string) =>
 export const useTimetable = (id: string) => useQuery(timetableQueryOptions(id));
 
 export const useCreateTimetable = () => {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
-  return useMutation({
+  return useApiMutation({
     mutationFn: () => {
       return chronoAPI.post<{ message: string; id: string }>(
         "/api/timetable/create",
@@ -41,14 +34,12 @@ export const useCreateTimetable = () => {
         queryKey: ["user"],
       });
     },
-    onError: (e) => toastHandler(e, toast),
   });
 };
 
 export const useCopyTimetable = () => {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
-  return useMutation({
+  return useApiMutation({
     mutationFn: (id: string) => {
       return chronoAPI.post<{ message: string; id: string }>(
         `/api/timetable/${id}/copy`,
@@ -57,7 +48,6 @@ export const useCopyTimetable = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user"] });
     },
-    onError: (error) => toastHandler(error, toast),
   });
 };
 
@@ -74,9 +64,8 @@ type EditTimetableParams = {
 export const editTimetableKey = ["editTimetable"];
 
 export const useEditTimetable = () => {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
-  return useMutation({
+  return useApiMutation({
     mutationKey: editTimetableKey,
     mutationFn: (data: EditTimetableParams) => {
       return chronoAPI.post(`/api/timetable/${data.id}/edit`, data.body);
@@ -89,14 +78,12 @@ export const useEditTimetable = () => {
         { throwOnError: true },
       );
     },
-    onError: (e) => toastHandler(e, toast),
   });
 };
 
 export const useDeleteTimetable = () => {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
-  return useMutation({
+  return useApiMutation({
     mutationFn: (id: string) => {
       return chronoAPI.post(`/api/timetable/${id}/delete`);
     },
@@ -105,7 +92,6 @@ export const useDeleteTimetable = () => {
         queryKey: ["user"],
       });
     },
-    onError: (e) => toastHandler(e, toast),
   });
 };
 
@@ -114,9 +100,8 @@ type SectionAction = "add" | "remove";
 export const useAddRemoveTimetableSection = (
   timetableId: string | undefined,
 ) => {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
-  return useMutation({
+  return useApiMutation({
     mutationKey: ["sections", timetableId],
     scope: { id: `sections:${timetableId}` },
     mutationFn: async ({
@@ -141,17 +126,13 @@ export const useAddRemoveTimetableSection = (
         queryKey: ["timetable", timetableId],
       });
     },
-    onError: (error) => {
-      haptic("error");
-      toastHandler(error, toast);
-    },
+    onError: () => haptic("error"),
   });
 };
 
 export const useSwapTimetableSections = (timetableId: string | undefined) => {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
-  return useMutation({
+  return useApiMutation({
     mutationKey: ["sections", timetableId],
     scope: { id: `sections:${timetableId}` },
     mutationFn: async ({
@@ -174,16 +155,12 @@ export const useSwapTimetableSections = (timetableId: string | undefined) => {
         queryKey: ["timetable", timetableId],
       });
     },
-    onError: (error) => {
-      haptic("error");
-      toastHandler(error, toast);
-    },
+    onError: () => haptic("error"),
   });
 };
 
 // shares the section mutations' key and scope, so it queues behind them
 export const useRemoveTimetableCourse = (timetableId: string | undefined) => {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["user"] });
@@ -192,7 +169,7 @@ export const useRemoveTimetableCourse = (timetableId: string | undefined) => {
     });
   };
 
-  const { mutate: restore } = useMutation({
+  const { mutate: restore } = useApiMutation({
     mutationKey: ["sections", timetableId],
     scope: { id: `sections:${timetableId}` },
     mutationFn: async (sectionIds: string[]) => {
@@ -204,13 +181,10 @@ export const useRemoveTimetableCourse = (timetableId: string | undefined) => {
     },
     // refetch on failure too: earlier sections may already be back
     onSettled: invalidate,
-    onError: (error) => {
-      haptic("error");
-      toastHandler(error, toast);
-    },
+    onError: () => haptic("error"),
   });
 
-  return useMutation({
+  return useApiMutation({
     mutationKey: ["sections", timetableId],
     scope: { id: `sections:${timetableId}` },
     mutationFn: async ({ courseId }: { courseId: string; code: string }) => {
@@ -240,9 +214,6 @@ export const useRemoveTimetableCourse = (timetableId: string | undefined) => {
       });
       return invalidate();
     },
-    onError: (error) => {
-      haptic("error");
-      toastHandler(error, toast);
-    },
+    onError: () => haptic("error"),
   });
 };

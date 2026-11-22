@@ -7,13 +7,12 @@ import DegreeDropDown from "@/components/DegreeDropDown";
 import ReportIssue from "@/components/ReportIssue";
 import { Button } from "@/components/ui/button";
 import { useEditUser, useUser } from "@/data-access/user";
-import { useToast } from "../components/ui/use-toast";
+import { toast } from "../components/ui/use-toast";
 import { router } from "../router";
 
 function EditUserProfile() {
   const { data: user, isLoading, isError, error } = useUser();
   const { mutate: editUser, isPending } = useEditUser();
-  const { toast } = useToast();
   // isPending lags a render behind a fast double tap, so guard synchronously.
   const submitting = useRef(false);
 
