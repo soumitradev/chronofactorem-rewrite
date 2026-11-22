@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import type { CookieOptions, Response } from "express";
-import jwt from "jsonwebtoken";
+import type { CookieOptions, Request, Response } from "express";
+import jwt, { type JwtPayload } from "jsonwebtoken";
 import { env } from "../config/server.js";
 
 const baseCookieOptions: CookieOptions = {
@@ -48,6 +48,33 @@ export const verifyJWT = (token: string) => {
 
 export const hashFingerprint = (fingerprintCookie: string) =>
   createHash("sha256").update(fingerprintCookie).digest("base64url");
+
+type SessionRead =
+  | {
+      ok: false;
+      error:
+        | "user session expired"
+        | "user session malformed"
+        | "user fingerprint malformed";
+    }
+  | { ok: true; payload: JwtPayload };
+
+// throws jwt.JsonWebTokenError for expired or tampered tokens, callers
+// decide how to answer that
+export const readSession = (req: Request): SessionRead => {
+  const { session, fingerprint } = req.cookies;
+  if (session === undefined || fingerprint === undefined) {
+    return { ok: false, error: "user session expired" };
+  }
+  const payload = verifyJWT(session);
+  if (typeof payload === "string") {
+    return { ok: false, error: "user session malformed" };
+  }
+  if (payload.fingerprintHash !== hashFingerprint(fingerprint)) {
+    return { ok: false, error: "user fingerprint malformed" };
+  }
+  return { ok: true, payload };
+};
 
 export const toTitleCase = (str: string | undefined) => {
   if (str === undefined) {

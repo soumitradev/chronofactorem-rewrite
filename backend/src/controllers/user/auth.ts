@@ -25,11 +25,11 @@ import {
   clearAuthCookies,
   clearPkceCookies,
   hashFingerprint,
+  readSession,
   setAuthCookies,
   setPkceCookies,
   signJWT,
   toTitleCase,
-  verifyJWT,
 } from "../../utils/authUtils.js";
 
 // On any route, when checking if a user is logged in, check for the cookie
@@ -62,15 +62,7 @@ export async function manageAuthRedirect(req: Request, res: Response) {
     const authRedirect = client.buildAuthorizationUrl(config, parameters);
 
     if (req.cookies.session && req.cookies.fingerprint) {
-      const sessionCookie = req.cookies.session;
-      const fingerprintCookie = req.cookies.fingerprint;
-
-      const sessionData = verifyJWT(sessionCookie);
-
-      if (
-        typeof sessionData === "string" ||
-        sessionData.fingerprintHash !== hashFingerprint(fingerprintCookie)
-      ) {
+      if (!readSession(req).ok) {
         clearAuthCookies(res);
         setPkceCookies(res, code_verifier, state);
         return res.redirect(authRedirect.href);
@@ -297,40 +289,21 @@ export async function getDegrees(req: Request, res: Response) {
     // the user: name, email and degrees is stored on the database
 
     // gets userInfo as part of session
-    if (
-      req.cookies.session === undefined ||
-      req.cookies.fingerprint === undefined
-    ) {
+    const read = readSession(req);
+    if (!read.ok) {
       return res.status(401).json({
         message: "cannot set degrees",
-        error: "user session expired",
+        error: read.error,
       });
     }
 
-    const sessionCookie = req.cookies.session;
-    const fingerprintCookie = req.cookies.fingerprint;
-
-    const sessionData = verifyJWT(sessionCookie);
-    if (typeof sessionData === "string") {
+    if (!ZodUnfinishedUserSession.safeParse(read.payload).success) {
       return res.status(401).json({
         message: "cannot set degrees",
         error: "user session malformed",
       });
     }
-
-    if (!ZodUnfinishedUserSession.safeParse(sessionData).success) {
-      return res.status(401).json({
-        message: "cannot set degrees",
-        error: "user session malformed",
-      });
-    }
-    const session = ZodUnfinishedUserSession.parse(sessionData);
-    if (session.fingerprintHash !== hashFingerprint(fingerprintCookie)) {
-      return res.status(401).json({
-        message: "cannot set degrees",
-        error: "user fingerprint malformed",
-      });
-    }
+    const session = ZodUnfinishedUserSession.parse(read.payload);
 
     if (
       !namedDegreeZodList("user").min(1).safeParse(req.body.degrees).success ||
@@ -430,29 +403,19 @@ export async function logout(_req: Request, res: Response) {
 export async function checkAuthStatus(req: Request, res: Response) {
   const logger = req.log;
   try {
-    if (
-      req.cookies.session === undefined ||
-      req.cookies.fingerprint === undefined
-    ) {
-      return res.status(401).json({
-        message: "user not logged in",
-      });
-    }
-
-    const sessionCookie = req.cookies.session;
-    const fingerprintCookie = req.cookies.fingerprint;
-
-    const sessionData = verifyJWT(sessionCookie);
-
-    if (
-      typeof sessionData === "string" ||
-      sessionData.fingerprintHash !== hashFingerprint(fingerprintCookie)
-    ) {
+    const read = readSession(req);
+    if (!read.ok) {
+      if (read.error === "user session expired") {
+        return res.status(401).json({
+          message: "user not logged in",
+        });
+      }
       return res.status(401).json({
         message: "user session malformed",
         error: "user session malformed",
       });
     }
+    const sessionData = read.payload;
 
     if (ZodUnfinishedUserSession.safeParse(sessionData).success) {
       const session = ZodUnfinishedUserSession.parse(sessionData);

@@ -1,9 +1,7 @@
-import { createHash } from "node:crypto";
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import { env } from "../config/server.js";
 import { ZodFinishedUserSession } from "../types/auth.js";
-import { clearAuthCookies } from "../utils/authUtils.js";
+import { clearAuthCookies, readSession } from "../utils/authUtils.js";
 
 // populates req.session when valid auth cookies are present, but never
 // rejects the request; used on routes that serve both logged-in and
@@ -14,26 +12,11 @@ export const attachSession = async (
   next: NextFunction,
 ) => {
   try {
-    if (req.cookies.session && req.cookies.fingerprint) {
-      const sessionData = jwt.verify(
-        req.cookies.session,
-        Buffer.from(env.JWT_PUBLIC_KEY, "base64"),
-        {
-          algorithms: ["RS256"],
-        },
-      );
-
-      if (
-        typeof sessionData !== "string" &&
-        sessionData.fingerprintHash ===
-          createHash("sha256")
-            .update(req.cookies.fingerprint)
-            .digest("base64url")
-      ) {
-        const parsedSession = ZodFinishedUserSession.safeParse(sessionData);
-        if (parsedSession.success) {
-          req.session = parsedSession.data;
-        }
+    const read = readSession(req);
+    if (read.ok) {
+      const parsedSession = ZodFinishedUserSession.safeParse(read.payload);
+      if (parsedSession.success) {
+        req.session = parsedSession.data;
       }
     }
   } catch {
@@ -48,45 +31,18 @@ export const authenticate = async (
   next: NextFunction,
 ) => {
   try {
-    if (
-      req.cookies.session === undefined ||
-      req.cookies.fingerprint === undefined
-    ) {
+    const read = readSession(req);
+    if (!read.ok) {
       return res.status(401).json({
-        message: "unauthorized",
-        error: "user session expired",
+        message:
+          read.error === "user session expired"
+            ? "unauthorized"
+            : "user session malformed",
+        error: read.error,
       });
     }
 
-    const sessionCookie = req.cookies.session;
-    const fingerprintCookie = req.cookies.fingerprint;
-
-    const sessionData = jwt.verify(
-      sessionCookie,
-      Buffer.from(env.JWT_PUBLIC_KEY, "base64"),
-      {
-        algorithms: ["RS256"],
-      },
-    );
-
-    if (typeof sessionData === "string") {
-      return res.status(401).json({
-        message: "user session malformed",
-        error: "user session malformed",
-      });
-    }
-
-    if (
-      sessionData.fingerprintHash !==
-      createHash("sha256").update(fingerprintCookie).digest("base64url")
-    ) {
-      return res.status(401).json({
-        message: "user session malformed",
-        error: "user fingerprint malformed",
-      });
-    }
-
-    const parsedSession = ZodFinishedUserSession.safeParse(sessionData);
+    const parsedSession = ZodFinishedUserSession.safeParse(read.payload);
     if (!parsedSession.success) {
       return res.status(401).json({
         message: "unauthorized",
