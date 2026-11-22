@@ -4,8 +4,8 @@
   "scripts": {
     "dev": "docker compose --profile dev up --build",
     "ingest": "docker compose --profile ingestion up --build --exit-code-from ingestion; s=$?; docker compose --profile ingestion down; exit $s",
-    "build": "pnpm -C lib exec tsc --build && pnpm -C backend exec tsc --build && pnpm -C frontend run build",
-    "lint": "pnpm -C lib exec biome ci . && pnpm -C backend exec biome ci . && pnpm -C frontend exec biome ci .",
-    "format": "pnpm -C lib exec biome check --write . && pnpm -C backend exec biome check --write . && pnpm -C frontend exec biome check --write ."
+    "build": "pnpm -C lib exec tsc --build && pnpm -C backend exec tsc --build && pnpm -C frontend run build && pnpm -C synthetics exec tsc --noEmit",
+    "lint": "pnpm -C lib exec biome ci . && pnpm -C backend exec biome ci . && pnpm -C frontend exec biome ci . && pnpm -C synthetics exec biome ci .",
+    "format": "pnpm -C lib exec biome check --write . && pnpm -C backend exec biome check --write . && pnpm -C frontend exec biome check --write . && pnpm -C synthetics exec biome check --write ."
   }
 }
