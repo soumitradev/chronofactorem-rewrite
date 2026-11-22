@@ -1,5 +1,5 @@
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
-import { useEffect, useId, useRef } from "react";
+import { useId, useRef } from "react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -36,20 +36,13 @@ export const DeleteTimetableDialog = ({
   onOpenChange: (open: boolean) => void;
 }) => {
   const isDesktop = useIsDesktop();
-  const { mutate: deleteTimetable } = useDeleteTimetable();
+  const { mutateOnce: deleteTimetable } = useDeleteTimetable();
   const descriptionId = useId();
   const cancel = useRef<HTMLButtonElement>(null);
 
-  // Delete stays clickable while the dialog animates out; send it once
-  const sent = useRef(false);
-  useEffect(() => {
-    if (open) sent.current = false;
-  }, [open]);
-  const confirm = () => {
-    if (sent.current) return;
-    sent.current = true;
-    deleteTimetable(timetableId, { onSuccess: onDeleted });
-  };
+  // Delete stays clickable while the dialog animates out
+  const confirm = () =>
+    deleteTimetable(timetableId, { onSuccess: () => onDeleted?.() });
 
   if (isDesktop) {
     return (

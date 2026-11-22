@@ -37,9 +37,9 @@ function FinalizeTimetable() {
     error: timetableError,
   } = useTimetable(timetableId);
 
-  const { mutate: editTimetable, isPending } = useEditTimetable();
-  // isPending lags a render behind a fast double tap, so guard synchronously.
-  const finishing = useRef(false);
+  const { mutateOnce: editTimetable, isPending } = useEditTimetable({
+    unlockOnSuccess: false,
+  });
   const copyTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(copyTimer.current), []);
 
@@ -80,8 +80,6 @@ function FinalizeTimetable() {
   };
 
   const finish = () => {
-    if (finishing.current) return;
-    finishing.current = true;
     editTimetable(
       {
         id: timetable.id,
@@ -98,9 +96,6 @@ function FinalizeTimetable() {
           router.navigate({
             to: "/",
           });
-        },
-        onError: () => {
-          finishing.current = false;
         },
       },
     );

@@ -1,6 +1,6 @@
 import { createLazyRoute } from "@tanstack/react-router";
 import { getBatchFromEmail, unknownDegree } from "lib";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { BottomBar } from "@/components/BottomBar";
 import { ButtonLabel } from "@/components/ButtonLabel";
 import DegreeDropDown from "@/components/DegreeDropDown";
@@ -13,9 +13,7 @@ import { router } from "../router";
 
 function EditUserProfile() {
   const { data: user, isLoading, isError, error } = useUser();
-  const { mutate: editUser, isPending } = useEditUser();
-  // isPending lags a render behind a fast double tap, so guard synchronously.
-  const submitting = useRef(false);
+  const { mutateOnce: editUser, isPending } = useEditUser();
 
   const [firstDegree, setFirstDegree] = useState<string | null>(
     user?.degrees?.[0] ?? null,
@@ -56,17 +54,7 @@ function EditUserProfile() {
         : [firstDegree]
       : [firstDegree];
 
-    if (submitting.current) return;
-    submitting.current = true;
-    editUser(
-      { degrees },
-      {
-        onError: () => {
-          submitting.current = false;
-        },
-        onSuccess: () => router.navigate({ to: "/" }),
-      },
-    );
+    editUser({ degrees }, { onSuccess: () => router.navigate({ to: "/" }) });
   };
 
   const canEdit = !user.degrees.includes(unknownDegree);

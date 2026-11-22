@@ -79,6 +79,8 @@ export const useUser = () => useQuery(userQueryOptions);
 export const useCreateUser = () => {
   const queryClient = useQueryClient();
   return useApiMutation({
+    // both pages navigate away on success
+    unlockOnSuccess: false,
     mutationFn: (body: { degrees: (string | null)[] }) => {
       return chronoAPI.post("/api/auth/submit", body);
     },
@@ -93,6 +95,8 @@ export const useCreateUser = () => {
 export const useEditUser = () => {
   const queryClient = useQueryClient();
   return useApiMutation({
+    // both pages navigate away on success
+    unlockOnSuccess: false,
     mutationFn: (body: { degrees: (string | null)[] }) => {
       return chronoAPI.post("/api/user/edit", body);
     },

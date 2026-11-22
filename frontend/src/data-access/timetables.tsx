@@ -4,7 +4,7 @@ import type z from "zod";
 import { ToastAction } from "@/components/ui/toast";
 import { toast } from "@/components/ui/use-toast";
 import { HapticTap, haptic } from "@/lib/haptics";
-import chronoAPI, { useApiMutation } from "./axios";
+import chronoAPI, { sectionLock, useApiMutation } from "./axios";
 
 const fetchTimetable = async (timetableId: string) => {
   const response = await chronoAPI.get<
@@ -63,9 +63,10 @@ type EditTimetableParams = {
 // Shared so every caller sees one edit in flight, wherever it was started.
 export const editTimetableKey = ["editTimetable"];
 
-export const useEditTimetable = () => {
+export const useEditTimetable = ({ unlockOnSuccess = true } = {}) => {
   const queryClient = useQueryClient();
   return useApiMutation({
+    unlockOnSuccess,
     mutationKey: editTimetableKey,
     mutationFn: (data: EditTimetableParams) => {
       return chronoAPI.post(`/api/timetable/${data.id}/edit`, data.body);
@@ -87,6 +88,8 @@ export const useDeleteTimetable = () => {
     mutationFn: (id: string) => {
       return chronoAPI.post(`/api/timetable/${id}/delete`);
     },
+    // the dialog closes and the card collapses, so delete is sent only once
+    unlockOnSuccess: false,
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["user"],
@@ -103,7 +106,8 @@ export const useAddRemoveTimetableSection = (
   const queryClient = useQueryClient();
   return useApiMutation({
     mutationKey: ["sections", timetableId],
-    scope: { id: `sections:${timetableId}` },
+    scope: { id: sectionLock(timetableId) },
+    lock: sectionLock(timetableId),
     mutationFn: async ({
       sectionId,
       action,
@@ -134,7 +138,8 @@ export const useSwapTimetableSections = (timetableId: string | undefined) => {
   const queryClient = useQueryClient();
   return useApiMutation({
     mutationKey: ["sections", timetableId],
-    scope: { id: `sections:${timetableId}` },
+    scope: { id: sectionLock(timetableId) },
+    lock: sectionLock(timetableId),
     mutationFn: async ({
       sectionId,
       newSectionId,
@@ -171,7 +176,8 @@ export const useRemoveTimetableCourse = (timetableId: string | undefined) => {
 
   const { mutate: restore } = useApiMutation({
     mutationKey: ["sections", timetableId],
-    scope: { id: `sections:${timetableId}` },
+    scope: { id: sectionLock(timetableId) },
+    lock: sectionLock(timetableId),
     mutationFn: async (sectionIds: string[]) => {
       for (const sectionId of sectionIds) {
         await chronoAPI.post(`/api/timetable/${timetableId}/add`, {
@@ -186,7 +192,8 @@ export const useRemoveTimetableCourse = (timetableId: string | undefined) => {
 
   return useApiMutation({
     mutationKey: ["sections", timetableId],
-    scope: { id: `sections:${timetableId}` },
+    scope: { id: sectionLock(timetableId) },
+    lock: sectionLock(timetableId),
     mutationFn: async ({ courseId }: { courseId: string; code: string }) => {
       if (timetableId === undefined) throw new Error("Timetable is not loaded");
       const result = await chronoAPI.post<{ sectionIds: string[] }>(

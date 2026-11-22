@@ -125,21 +125,15 @@ const CourseDetailsMenu = ({
     },
   } = useTimetableState();
   const { openCourse, closeCourse, setType } = useTimetableNav();
-  const { mutate: sectionAction } = useAddRemoveTimetableSection(timetable?.id);
-  const { mutate: swapSections } = useSwapTimetableSections(timetable?.id);
-  const { mutate: removeCourse } = useRemoveTimetableCourse(timetable?.id);
-
-  const pending =
-    useIsMutating({ mutationKey: ["sections", timetable?.id] }) > 0;
-  // useIsMutating lags a tap by a tick; this closes the gap for a quick
-  // second tap so only one request goes out.
-  const inFlight = useRef(false);
-  const busy = pending || inFlight.current;
-  const settle = {
-    onSettled: () => {
-      inFlight.current = false;
-    },
-  };
+  const { mutateOnce: sectionAction, isLocked } = useAddRemoveTimetableSection(
+    timetable?.id,
+  );
+  const { mutateOnce: swapSections } = useSwapTimetableSections(timetable?.id);
+  const { mutateOnce: removeCourse } = useRemoveTimetableCourse(timetable?.id);
+  // the three share one lock, so isLocked covers them all
+  const busy =
+    useIsMutating({ mutationKey: ["sections", timetable?.id] }) > 0 ||
+    isLocked();
   // Short delay before moving to next tab
   const advance = useRef<number | undefined>(undefined);
   const cancelAdvance = () => window.clearTimeout(advance.current);
@@ -149,24 +143,21 @@ const CourseDetailsMenu = ({
 
   const handleSectionClick = (section: Section) => {
     cancelAdvance();
-    if (!timetable || pending || inFlight.current) return;
-    inFlight.current = true;
+    if (!timetable || isLocked()) return;
     haptic("selection");
     if (timetable.sections.some((item) => item.id === section.id)) {
-      sectionAction({ sectionId: section.id, action: "remove" }, settle);
+      sectionAction({ sectionId: section.id, action: "remove" });
       return;
     }
     const other = timetable.sections.find(
       (item) =>
         item.type === section.type && item.courseId === section.courseId,
     );
-    if (other)
-      swapSections({ sectionId: other.id, newSectionId: section.id }, settle);
+    if (other) swapSections({ sectionId: other.id, newSectionId: section.id });
     else
       sectionAction(
         { sectionId: section.id, action: "add" },
         {
-          ...settle,
           onSuccess: () => {
             const next =
               uniqueSectionTypes[uniqueSectionTypes.indexOf(section.type) + 1];
@@ -180,12 +171,11 @@ const CourseDetailsMenu = ({
       );
   };
   const handleRemoveCourse = () => {
-    if (!course || pending || inFlight.current) return;
-    inFlight.current = true;
+    if (!course || isLocked()) return;
     haptic("selection");
     removeCourse(
       { courseId: course.id, code: course.code },
-      { ...settle, onSuccess: () => closeCourse() },
+      { onSuccess: () => closeCourse() },
     );
   };
   // a section's day and hour, without the course code and room
