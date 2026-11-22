@@ -1,11 +1,16 @@
 import { useSearch } from "@tanstack/react-router";
 import { Columns3, Rows3 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatAxisHour } from "@/lib/formatTime";
 import { skeletonRef } from "@/lib/skeletonFade";
 import type { TimetableSearch } from "@/lib/timetableSearch";
 import { useIsDesktop } from "@/lib/useIsDesktop";
-import { defaultDay, timetableDayNames } from "@/utils/timetableGrid";
+import {
+  defaultDay,
+  MIN_DAYS,
+  MIN_HOURS,
+  timetableDayNames,
+} from "@/utils/timetableGrid";
+import { WeekGridFrame } from "./WeekGridFrame";
 
 const ref = skeletonRef("timetable");
 
@@ -71,38 +76,7 @@ export function TimetablePageSkeleton({
         </div>
         <div className="mx-auto max-w-[640px]">
           {view === "week" ? (
-            // WeekGrid's frame: same columns, rows and labels (the hours
-            // start at the grid's fixed first hour), with placeholder tiles
-            <div
-              className="relative grid gap-x-[3px] gap-y-[5px] sm:gap-y-1.5 px-2.5 py-1 [--tt-row:50px] sm:[--tt-row:64px]"
-              style={{
-                gridTemplateColumns: "40px repeat(5, minmax(0, 1fr))",
-                gridTemplateRows: "22px repeat(10, var(--tt-row))",
-              }}
-            >
-              {timetableDayNames.slice(0, 5).map((name, d) => (
-                <div
-                  key={name}
-                  className="self-end pb-1 text-center text-xs font-semibold tracking-[.06em] text-ink-muted uppercase"
-                  style={{ gridColumn: d + 2, gridRow: 1 }}
-                >
-                  {name.slice(0, 3)}
-                </div>
-              ))}
-              {Array.from({ length: 10 }, (_, h) => (
-                <div key={`hour-${formatAxisHour(h)}`} className="contents">
-                  <div
-                    className="-mx-px -translate-y-[3.5px] self-start border-gridline border-t"
-                    style={{ gridColumn: "2 / -1", gridRow: h + 2 }}
-                  />
-                  <div
-                    className="-translate-y-[9px] pr-1 text-right text-xs whitespace-nowrap text-ink-faint"
-                    style={{ gridColumn: 1, gridRow: h + 2 }}
-                  >
-                    {formatAxisHour(h)}
-                  </div>
-                </div>
-              ))}
+            <WeekGridFrame dayCount={MIN_DAYS} hourCount={MIN_HOURS}>
               {weekTiles.map(([d, h, span]) => (
                 <Skeleton
                   key={`${d}-${h}`}
@@ -113,7 +87,7 @@ export function TimetablePageSkeleton({
                   }}
                 />
               ))}
-            </div>
+            </WeekGridFrame>
           ) : (
             [0, 1, 2, 3, 4].map((i) => (
               <div
