@@ -336,10 +336,10 @@ export function MoreMenu({
           timetableId={timetable.id}
           onDeleted={() => router.navigate({ to: "/" })}
           open={deleteOpen}
-          onOpenChange={(open) => {
-            setDeleteOpen(open);
-            // opened from a menu item, so Radix has no trigger to refocus
-            if (!open) setTimeout(() => trigger.current?.focus(), 50);
+          onOpenChange={setDeleteOpen}
+          onCloseAutoFocus={(e) => {
+            e.preventDefault();
+            trigger.current?.focus();
           }}
         />
       )}

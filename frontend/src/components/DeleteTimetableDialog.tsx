@@ -29,11 +29,14 @@ export const DeleteTimetableDialog = ({
   onDeleted,
   open,
   onOpenChange,
+  onCloseAutoFocus,
 }: {
   timetableId: string;
   onDeleted?: () => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  // it opens from a menu item, so Radix has no trigger to return focus to
+  onCloseAutoFocus: (e: Event) => void;
 }) => {
   const isDesktop = useIsDesktop();
   const { mutateOnce: deleteTimetable } = useDeleteTimetable();
@@ -47,7 +50,10 @@ export const DeleteTimetableDialog = ({
   if (isDesktop) {
     return (
       <AlertDialog open={open} onOpenChange={onOpenChange}>
-        <AlertDialogContent className="block w-[440px] max-w-[calc(100%-24px)]">
+        <AlertDialogContent
+          className="block w-[440px] max-w-[calc(100%-24px)]"
+          onCloseAutoFocus={onCloseAutoFocus}
+        >
           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
           <AlertDialogDescription className="mt-2 text-[14.5px] leading-normal">
             {description}
@@ -78,6 +84,7 @@ export const DeleteTimetableDialog = ({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         aria-describedby={descriptionId}
+        onCloseAutoFocus={onCloseAutoFocus}
         // vaul skips Radix's autofocus; start on the safe choice so focus
         // is trapped in the sheet and Enter never deletes by accident
         onOpenAutoFocus={(e) => {

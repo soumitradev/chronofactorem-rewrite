@@ -77,9 +77,12 @@ function TimetableCard({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
 
-  // The dialogs open from a menu item, so Radix has no trigger to hand focus
-  // back to once they close. Return it to the ⋯ button after its own cleanup.
-  const restoreFocus = () => setTimeout(() => menuButton.current?.focus(), 50);
+  // the dialogs open from a menu item, so Radix has no trigger to return focus
+  // to. A deleted card is inert by then, so Home has already moved focus on
+  const returnFocus = (e: Event) => {
+    e.preventDefault();
+    menuButton.current?.focus();
+  };
 
   const {
     mutate: editTimetable,
@@ -203,22 +206,17 @@ function TimetableCard({
       <DeleteTimetableDialog
         timetableId={timetable.id}
         open={deleteOpen}
-        onOpenChange={(open) => {
-          setDeleteOpen(open);
-          if (!open) restoreFocus();
-        }}
+        onOpenChange={setDeleteOpen}
+        onCloseAutoFocus={returnFocus}
         onDeleted={() => onDeleted(timetable.id)}
       />
 
       {timetable.archived && (
-        <Dialog
-          open={archivedOpen}
-          onOpenChange={(open) => {
-            setArchivedOpen(open);
-            if (!open) restoreFocus();
-          }}
-        >
-          <DialogContent className="sm:max-w-100">
+        <Dialog open={archivedOpen} onOpenChange={setArchivedOpen}>
+          <DialogContent
+            className="sm:max-w-100"
+            onCloseAutoFocus={returnFocus}
+          >
             <DialogHeader>
               <DialogTitle>Edit Archived Timetable</DialogTitle>
             </DialogHeader>
