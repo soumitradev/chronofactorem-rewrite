@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { TimetableSectionType } from "@/utils/timetable";
+import { prefersReducedMotion } from "./viewTransitions";
 
 export type Presence = "present" | "entering" | "leaving";
 
@@ -16,10 +17,7 @@ export function useSectionPresence(
   opts: { disabled: boolean },
 ): { section: TimetableSectionType; presence: Presence }[] {
   // under reduced motion nothing animates, so nothing needs to linger either
-  const off =
-    opts.disabled ||
-    (typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const off = opts.disabled || prefersReducedMotion();
   const [prev, setPrev] = useState(sections);
   const [entering, setEntering] = useState<ReadonlySet<string>>(new Set());
   const [leaving, setLeaving] = useState<TimetableSectionType[]>([]);

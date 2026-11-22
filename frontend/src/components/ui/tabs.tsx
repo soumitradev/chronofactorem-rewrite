@@ -1,9 +1,7 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
-
-const reducedMotion = () =>
-  window.matchMedia("(prefers-reduced-motion: reduce)").matches
+import { prefersReducedMotion } from "@/lib/viewTransitions"
 
 type Tab<T extends string> = {
   value: T
@@ -124,7 +122,7 @@ function Tabs<T extends string>({
     const track = trackRef.current
     if (!track) return
     const left = leftOf(i)
-    if (reducedMotion() || Math.abs(track.scrollLeft - left) < 1) {
+    if (prefersReducedMotion() || Math.abs(track.scrollLeft - left) < 1) {
       track.scrollTo({ left, behavior: "instant" })
       if (tabs[i].value !== value) onValueChange(tabs[i].value)
       return
