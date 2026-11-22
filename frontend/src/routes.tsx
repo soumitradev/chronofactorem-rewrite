@@ -13,12 +13,10 @@ import { HomeSkeleton } from "@/components/HomeSkeleton";
 import NotFound from "@/components/NotFound";
 import { TimetablePageSkeleton } from "@/components/timetable/TimetablePageSkeleton";
 import { useToast } from "@/components/ui/use-toast";
-import { handleLoginRedirect } from "@/data-access/errors/handlers";
-import toastHandler from "@/data-access/errors/toastHandler";
-import { authStatusQueryOptions } from "@/data-access/hooks/useAuthStatus";
-import { courseQueryOptions } from "@/data-access/hooks/useCourses";
-import { timetableQueryOptions } from "@/data-access/hooks/useTimetable";
-import { userQueryOptions } from "@/data-access/hooks/useUser";
+import { courseQueryOptions } from "@/data-access/courses";
+import { handleLoginRedirect, toastHandler } from "@/data-access/errors";
+import { timetableQueryOptions } from "@/data-access/timetables";
+import { authStatusQueryOptions, userQueryOptions } from "@/data-access/user";
 import { rootSearchSchema, timetableSearchSchema } from "@/lib/timetableSearch";
 import RootComponent from "./RootComponent";
 

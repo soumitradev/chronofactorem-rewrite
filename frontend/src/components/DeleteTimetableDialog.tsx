@@ -13,7 +13,7 @@ import {
   SheetContent,
   SheetHeader,
 } from "@/components/ui/sheet";
-import useDeleteTimetable from "@/data-access/hooks/useDeleteTimetable";
+import { useDeleteTimetable } from "@/data-access/timetables";
 import { HapticTap, haptic } from "@/lib/haptics";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 

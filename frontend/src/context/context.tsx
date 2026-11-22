@@ -10,10 +10,9 @@ import {
   useRef,
 } from "react";
 import { useTheme } from "@/components/ThemeProvider";
-import useCourse from "@/data-access/hooks/useCourse";
-import { courseQueryOptions } from "@/data-access/hooks/useCourses";
-import useTimetable from "@/data-access/hooks/useTimetable";
-import useUser from "@/data-access/hooks/useUser";
+import { courseQueryOptions, useCourse } from "@/data-access/courses";
+import { useTimetable } from "@/data-access/timetables";
+import { useUser } from "@/data-access/user";
 import { courseHues } from "@/lib/courseHues";
 import { useTimetableNav } from "@/lib/useTimetableNav";
 import {

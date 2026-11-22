@@ -3,7 +3,7 @@ import { unknownDegree } from "lib";
 import { ExternalLink } from "lucide-react";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTimetableState } from "@/context";
-import { useRemoveTimetableCourse } from "@/data-access/hooks/useRemoveTimetableCourse";
+import { useRemoveTimetableCourse } from "@/data-access/timetables";
 import { haptic } from "@/lib/haptics";
 import { useTimetableNav } from "@/lib/useTimetableNav";
 import { useWarningsSummary } from "@/lib/useWarningsSummary";

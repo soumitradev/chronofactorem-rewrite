@@ -1,5 +1,7 @@
-import type { AxiosResponse } from "axios";
+import { AxiosError, type AxiosResponse } from "axios";
 import ReportIssueToastAction from "@/components/ReportIssueToastAction";
+import type { toast } from "@/components/ui/use-toast";
+import { router } from "@/router";
 
 const errorTitleMap: Partial<Record<number, string>> = {
   400: "Error",
@@ -30,4 +32,31 @@ export const UnknownError = () => {
     variant: "destructive" as const,
     action: <ReportIssueToastAction />,
   };
+};
+
+export const handleLoginRedirect = (error: unknown) => {
+  if (
+    error instanceof AxiosError &&
+    error.response &&
+    error.response.status === 401
+  ) {
+    router.navigate({
+      to: "/login",
+    });
+  }
+};
+
+export const toastHandler = (error: Error, toaster: typeof toast) => {
+  if (error instanceof AxiosError && error.response) {
+    switch (error.response.status) {
+      case 401:
+        handleLoginRedirect(error);
+        return;
+      default:
+        toaster(HTTPError(error.response, error.response.status));
+        return;
+    }
+  }
+  console.error(error);
+  toaster(UnknownError());
 };

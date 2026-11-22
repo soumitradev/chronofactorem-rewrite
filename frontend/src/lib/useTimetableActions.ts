@@ -1,9 +1,10 @@
 import { useIsMutating } from "@tanstack/react-query";
 import { TimetableActionType, useTimetableState } from "@/context";
-import useCopyTimetable from "@/data-access/hooks/useCopyTimetable";
-import useEditTimetable, {
+import {
   editTimetableKey,
-} from "@/data-access/hooks/useEditTimetable";
+  useCopyTimetable,
+  useEditTimetable,
+} from "@/data-access/timetables";
 import { router } from "../router";
 import { preloadEditorOnIntent, preloadOnIntent } from "./preloadOnIntent";
 

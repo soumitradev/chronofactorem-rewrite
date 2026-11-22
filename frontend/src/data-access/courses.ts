@@ -1,0 +1,43 @@
+import { queryOptions, useQuery } from "@tanstack/react-query";
+import type { courseType, courseWithSectionsType } from "lib";
+import type z from "zod";
+import chronoAPI from "./axios";
+
+type CourseFilters = {
+  acadYear: number;
+  semester: number;
+};
+
+const fetchCourses = async (filters?: CourseFilters) => {
+  const response = await chronoAPI.get<z.infer<typeof courseType>[]>(
+    "/api/course",
+    {
+      params: filters,
+      headers: { "Cache-Control": "max-age=0" },
+    },
+  );
+  return response.data;
+};
+
+export const courseQueryOptions = (filters?: CourseFilters) =>
+  queryOptions({
+    queryKey: ["courses", filters ?? null],
+    queryFn: () => fetchCourses(filters),
+  });
+
+const fetchCourse = async (currentCourseID: string) => {
+  const response = await chronoAPI.get<z.infer<typeof courseWithSectionsType>>(
+    `/api/course/${currentCourseID}`,
+  );
+  return response.data;
+};
+
+export const courseByIdQueryOptions = (currentCourseID: string | null) =>
+  queryOptions({
+    queryKey: ["course", currentCourseID],
+    queryFn: () => fetchCourse(currentCourseID as string),
+    enabled: currentCourseID !== null,
+  });
+
+export const useCourse = (currentCourseID: string | null) =>
+  useQuery(courseByIdQueryOptions(currentCourseID));

@@ -10,8 +10,8 @@ import { TimetableDock } from "@/components/timetable/TimetableDock";
 import { TimetablePageSkeleton } from "@/components/timetable/TimetablePageSkeleton";
 import { TimetableSurface } from "@/components/timetable/TimetableSurface";
 import { TimetableProvider, useTimetableState } from "@/context";
-import useCourse from "@/data-access/hooks/useCourse";
-import { useAddRemoveTimetableSection } from "@/data-access/hooks/useTimetableSectionAction";
+import { useCourse } from "@/data-access/courses";
+import { useAddRemoveTimetableSection } from "@/data-access/timetables";
 import {
   SectionPreviewProvider,
   useSectionPreview,
