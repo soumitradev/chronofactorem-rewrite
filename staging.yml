@@ -1,0 +1,14 @@
+# Previews on ditto: the prod Compose setup, with staging values.
+version: 1
+profiles: [prod]
+service: frontend-prod
+env:
+  FRONTEND_URL: ${DITTO_URL}
+  BACKEND_URL: ${DITTO_URL}/api
+  VITE_FRONTEND_URL: ${DITTO_URL}
+hooks:
+  # A fresh preview's database is empty: load the course data.
+  after_start: docker compose --profile ingestion run --rm ingestion
+# The preview inspector files issues on the upstream repo, not this fork.
+inspector:
+  issues: crux-bphc/chronofactorem-rewrite
